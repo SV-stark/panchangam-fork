@@ -2,14 +2,86 @@
 // deno-lint-ignore-file
 // deno-fmt-ignore-file
 
+export function calculate_daily_panchang(
+  year: number,
+  month: number,
+  day: number,
+  location: Location,
+  ayan_mode: number,
+): DailyPanchang;
 /**
- * Calculate Nakshatra for a given Julian Day
- * Each Nakshatra spans 13°20' (13.333... degrees)
+ * Check for Planetary War (Graha Yuddha)
+ * Occurs when two Tara Grahas (Mars, Mercury, Jupiter, Venus, Saturn)
+ * are within 1 degree of each other.
  */
-export function calculate_nakshatra(
+export function check_graha_yuddha(jd: number, ayan_mode: number): any;
+/**
+ * Get Ayanamsha value for a given mode and Julian Day
+ */
+export function get_ayanamsha(mode: AyanamshaMode, jd: number): number;
+/**
+ * Calculate Karana for a given Julian Day
+ * There are 60 Karanas per lunar month (2 per Tithi)
+ */
+export function calculate_karana(jd: number): KaranaInfo;
+/**
+ * Get the library version from Swiss Ephemeris
+ */
+export function get_version(): string;
+/**
+ * Calculate sunrise time for a given date and location
+ * Returns Unix timestamp in milliseconds
+ */
+export function calculate_sunrise(
+  year: number,
+  month: number,
+  day: number,
+  location: Location,
+): number;
+/**
+ * Calculate sunset time for a given date and location
+ * Returns Unix timestamp in milliseconds
+ */
+export function calculate_sunset(
+  year: number,
+  month: number,
+  day: number,
+  location: Location,
+): number;
+/**
+ * Calculate Yoga for a given Julian Day
+ * Formula: Yoga = floor((Moon_long + Sun_long) / 13.333) + 1
+ */
+export function calculate_yoga(
   jd: number,
   ayanamsha_mode: AyanamshaMode,
-): NakshatraInfo;
+): YogaInfo;
+/**
+ * Calculate Rahu Kaal for a given day
+ * sunrise_ms and sunset_ms are Unix timestamps in milliseconds
+ * weekday is 0=Sunday, 6=Saturday
+ */
+export function calculate_rahu_kaal(
+  sunrise_ms: number,
+  sunset_ms: number,
+  weekday: number,
+): TimeInterval;
+/**
+ * Calculate Yamaganda for a given day
+ */
+export function calculate_yamaganda(
+  sunrise_ms: number,
+  sunset_ms: number,
+  weekday: number,
+): TimeInterval;
+/**
+ * Calculate Gulika Kaal for a given day
+ */
+export function calculate_gulika(
+  sunrise_ms: number,
+  sunset_ms: number,
+  weekday: number,
+): TimeInterval;
 /**
  * Swiss Ephemeris Raw API
  *
@@ -61,83 +133,37 @@ export function raw_swe_set_sid_mode(
 ): void;
 export function raw_swe_get_ayanamsa_ut(tjd_ut: number): number;
 /**
- * Calculate Tithi for a given Julian Day
- * Returns TithiInfo with index, name, paksha, and completion percentage
- */
-export function calculate_tithi(jd: number): TithiInfo;
-/**
- * Calculate Yoga for a given Julian Day
- * Formula: Yoga = floor((Moon_long + Sun_long) / 13.333) + 1
- */
-export function calculate_yoga(
-  jd: number,
-  ayanamsha_mode: AyanamshaMode,
-): YogaInfo;
-/**
- * Get Ayanamsha value for a given mode and Julian Day
- */
-export function get_ayanamsha(mode: AyanamshaMode, jd: number): number;
-/**
- * Calculate Rahu Kaal for a given day
- * sunrise_ms and sunset_ms are Unix timestamps in milliseconds
- * weekday is 0=Sunday, 6=Saturday
- */
-export function calculate_rahu_kaal(
-  sunrise_ms: number,
-  sunset_ms: number,
-  weekday: number,
-): TimeInterval;
-/**
- * Calculate Yamaganda for a given day
- */
-export function calculate_yamaganda(
-  sunrise_ms: number,
-  sunset_ms: number,
-  weekday: number,
-): TimeInterval;
-/**
- * Calculate Gulika Kaal for a given day
- */
-export function calculate_gulika(
-  sunrise_ms: number,
-  sunset_ms: number,
-  weekday: number,
-): TimeInterval;
-/**
- * Get the library version from Swiss Ephemeris
- */
-export function get_version(): string;
-/**
- * Calculate sunrise time for a given date and location
- * Returns Unix timestamp in milliseconds
- */
-export function calculate_sunrise(
-  year: number,
-  month: number,
-  day: number,
-  location: Location,
-): number;
-/**
- * Calculate sunset time for a given date and location
- * Returns Unix timestamp in milliseconds
- */
-export function calculate_sunset(
-  year: number,
-  month: number,
-  day: number,
-  location: Location,
-): number;
-/**
- * Calculate Karana for a given Julian Day
- * There are 60 Karanas per lunar month (2 per Tithi)
- */
-export function calculate_karana(jd: number): KaranaInfo;
-/**
  * Calculate Vara (weekday) for a given Julian Day
  * Note: This returns the astronomical weekday.
  * For Vedic Vara, compare with sunrise time.
  */
 export function calculate_vara(jd: number): VaraInfo;
+/**
+ * Calculate Raahu, Yamaganda, and Gulika for a given day
+ *
+ * # Arguments
+ * * `sunrise_ms` - Unix timestamp of sunrise in ms
+ * * `sunset_ms` - Unix timestamp of sunset in ms
+ * * `weekday` - 0=Sunday, 1=Monday, ..., 6=Saturday
+ */
+export function calculate_muhurats(
+  sunrise_ms: number,
+  sunset_ms: number,
+  weekday: number,
+): DayMuhurats;
+/**
+ * Calculate Nakshatra for a given Julian Day
+ * Each Nakshatra spans 13°20' (13.333... degrees)
+ */
+export function calculate_nakshatra(
+  jd: number,
+  ayanamsha_mode: AyanamshaMode,
+): NakshatraInfo;
+/**
+ * Calculate Tithi for a given Julian Day
+ * Returns TithiInfo with index, name, paksha, and completion percentage
+ */
+export function calculate_tithi(jd: number): TithiInfo;
 /**
  * Ayanamsha modes
  */
@@ -157,7 +183,7 @@ export enum AyanamshaMode {
   /**
    * True Chitrapaksha
    */
-  TrueChitrapaksha = 3,
+  TrueCitra = 27,
 }
 /**
  * Paksha (lunar fortnight)
@@ -165,6 +191,36 @@ export enum AyanamshaMode {
 export enum Paksha {
   Shukla = 0,
   Krishna = 1,
+}
+export class DailyPanchang {
+  private constructor();
+  free(): void;
+  [Symbol.dispose](): void;
+  sunrise: number;
+  sunset: number;
+  tithi_index: number;
+  tithi_name: string;
+  get tithi_end_time(): number | undefined;
+  set tithi_end_time(value: number | null | undefined);
+  nakshatra_index: number;
+  nakshatra_name: string;
+  get nakshatra_end_time(): number | undefined;
+  set nakshatra_end_time(value: number | null | undefined);
+  yoga_index: number;
+  yoga_name: string;
+  get yoga_end_time(): number | undefined;
+  set yoga_end_time(value: number | null | undefined);
+  vara_name: string;
+  ayanamsha_value: number;
+  muhurats: DayMuhurats;
+}
+export class DayMuhurats {
+  private constructor();
+  free(): void;
+  [Symbol.dispose](): void;
+  rahu_kalam: Muhurat;
+  yamaganda: Muhurat;
+  gulika: Muhurat;
 }
 /**
  * Karana information
@@ -196,6 +252,14 @@ export class Location {
   latitude: number;
   longitude: number;
   altitude: number;
+}
+export class Muhurat {
+  private constructor();
+  free(): void;
+  [Symbol.dispose](): void;
+  name: string;
+  start: number;
+  end: number;
 }
 /**
  * Nakshatra information
@@ -289,6 +353,21 @@ export class VaraInfo {
    * Planetary lord
    */
   lord: string;
+}
+export class WarDetails {
+  private constructor();
+  free(): void;
+  [Symbol.dispose](): void;
+  planet1_id: number;
+  planet1_name: string;
+  planet1_long: number;
+  planet1_mag: number;
+  planet2_id: number;
+  planet2_name: string;
+  planet2_long: number;
+  planet2_mag: number;
+  longitude_diff: number;
+  winner_id: number;
 }
 /**
  * Yoga information

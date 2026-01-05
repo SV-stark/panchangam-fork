@@ -19,7 +19,7 @@ use wasm_bindgen::prelude::*;
 use serde::{Deserialize, Serialize};
 
 // Include generated Swiss Ephemeris bindings
-mod swe_bindings {
+pub(crate) mod swe_bindings {
     #![allow(non_upper_case_globals)]
     #![allow(non_camel_case_types)]
     #![allow(non_snake_case)]

@@ -14,7 +14,7 @@ pub enum AyanamshaMode {
     /// Krishnamurti (KP)
     Krishnamurti = 2,
     /// True Chitrapaksha
-    TrueChitrapaksha = 3,
+    TrueCitra = 27,
 }
 
 impl AyanamshaMode {
@@ -23,7 +23,7 @@ impl AyanamshaMode {
             AyanamshaMode::Lahiri => swe_bindings::SE_SIDM_LAHIRI as i32,
             AyanamshaMode::Raman => swe_bindings::SE_SIDM_RAMAN as i32,
             AyanamshaMode::Krishnamurti => swe_bindings::SE_SIDM_KRISHNAMURTI as i32,
-            AyanamshaMode::TrueChitrapaksha => swe_bindings::SE_SIDM_TRUE_CITRA as i32,
+            AyanamshaMode::TrueCitra => swe_bindings::SE_SIDM_TRUE_CITRA as i32,
         }
     }
 }
