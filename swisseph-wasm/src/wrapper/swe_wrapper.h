@@ -40,6 +40,8 @@ double swe_deltat(double tjd);
 char* swe_get_planet_name(int32_t ipl, char *spname);
 double swe_get_ayanamsa_ut(double tjd_ut);
 
+char* swe_version(char* s);
+
 #ifdef __cplusplus
 }
 #endif

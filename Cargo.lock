@@ -441,6 +441,7 @@ dependencies = [
  "bindgen",
  "cc",
  "js-sys",
+ "libc",
  "libm",
  "wasm-bindgen",
 ]

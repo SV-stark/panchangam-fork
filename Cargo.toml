@@ -2,6 +2,9 @@
 name = "panchangam"
 version = "0.1.0"
 edition = "2021"
+description = "High-precision Vedic Panchangam calculations using Swiss Ephemeris"
+license = "MIT"
+repository = "https://github.com/fusionstrings/panchangam"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -11,7 +14,7 @@ crate-type = ["cdylib", "rlib"]
 members = ["swisseph-wasm"]
 
 [dependencies]
-swisseph-wasm = { path = "./swisseph-wasm" }
+swisseph-wasm = { path = "./swisseph-wasm", version = "0.1.0" }
 wasm-bindgen = "=0.2.105"
 js-sys = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
