@@ -1,13 +1,13 @@
 //! Sunrise/Sunset calculations using SPA (Solar Position Algorithm)
 //! Accounts for atmospheric refraction and elevation
 
-use spa::{SolarPos, sunrise_and_set, SunriseAndSet, StdFloatOps};
-use chrono::{NaiveDate, Timelike, TimeZone};
+use spa::{sunrise_and_set, SunriseAndSet, StdFloatOps};
+use chrono::{Timelike, TimeZone};
 
 /// Calculate sunrise time for a given date and location
 /// Returns Unix timestamp in milliseconds
 /// Accounts for atmospheric refraction (standard 0.833°)
-pub fn calculate_sunrise(year: i32, month: u32, day: u32, lat: f64, lon: f64, altitude: f64) -> f64 {
+pub fn calculate_sunrise(year: i32, month: u32, day: u32, lat: f64, lon: f64, _altitude: f64) -> f64 {
     let utc_date = chrono::Utc.with_ymd_and_hms(year, month, day, 12, 0, 0).unwrap();
     
     match sunrise_and_set::<StdFloatOps>(utc_date, lat, lon) {
@@ -28,7 +28,7 @@ pub fn calculate_sunrise(year: i32, month: u32, day: u32, lat: f64, lon: f64, al
 
 /// Calculate sunset time for a given date and location
 /// Returns Unix timestamp in milliseconds
-pub fn calculate_sunset(year: i32, month: u32, day: u32, lat: f64, lon: f64, altitude: f64) -> f64 {
+pub fn calculate_sunset(year: i32, month: u32, day: u32, lat: f64, lon: f64, _altitude: f64) -> f64 {
     let utc_date = chrono::Utc.with_ymd_and_hms(year, month, day, 12, 0, 0).unwrap();
     
     match sunrise_and_set::<StdFloatOps>(utc_date, lat, lon) {

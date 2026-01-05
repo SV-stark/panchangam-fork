@@ -2,19 +2,46 @@
 // deno-lint-ignore-file
 // deno-fmt-ignore-file
 
-export function calculate_daily_panchang(
-  year: number,
-  month: number,
-  day: number,
-  location: Location,
-  ayan_mode: number,
-): DailyPanchang;
 /**
- * Check for Planetary War (Graha Yuddha)
- * Occurs when two Tara Grahas (Mars, Mercury, Jupiter, Venus, Saturn)
- * are within 1 degree of each other.
+ * Calculate Vara (weekday) for a given Julian Day
+ * Note: This returns the astronomical weekday.
+ * For Vedic Vara, compare with sunrise time.
  */
-export function check_graha_yuddha(jd: number, ayan_mode: number): any;
+export function calculate_vara(jd: number): VaraInfo;
+/**
+ * Calculate Raahu, Yamaganda, and Gulika for a given day
+ *
+ * # Arguments
+ * * `sunrise_ms` - Unix timestamp of sunrise in ms
+ * * `sunset_ms` - Unix timestamp of sunset in ms
+ * * `weekday` - 0=Sunday, 1=Monday, ..., 6=Saturday
+ */
+export function calculate_muhurats(
+  sunrise_ms: number,
+  sunset_ms: number,
+  weekday: number,
+): DayMuhurats;
+/**
+ * Calculate Yoga for a given Julian Day
+ * Formula: Yoga = floor((Moon_long + Sun_long) / 13.333) + 1
+ */
+export function calculate_yoga(
+  jd: number,
+  ayanamsha_mode: AyanamshaMode,
+): YogaInfo;
+/**
+ * Calculate Tithi for a given Julian Day
+ * Returns TithiInfo with index, name, paksha, and completion percentage
+ */
+export function calculate_tithi(jd: number): TithiInfo;
+/**
+ * Calculate Nakshatra for a given Julian Day
+ * Each Nakshatra spans 13°20' (13.333... degrees)
+ */
+export function calculate_nakshatra(
+  jd: number,
+  ayanamsha_mode: AyanamshaMode,
+): NakshatraInfo;
 /**
  * Get Ayanamsha value for a given mode and Julian Day
  */
@@ -48,14 +75,19 @@ export function calculate_sunset(
   day: number,
   location: Location,
 ): number;
+export function calculate_daily_panchang(
+  year: number,
+  month: number,
+  day: number,
+  location: Location,
+  ayan_mode: number,
+): DailyPanchang;
 /**
- * Calculate Yoga for a given Julian Day
- * Formula: Yoga = floor((Moon_long + Sun_long) / 13.333) + 1
+ * Check for Planetary War (Graha Yuddha)
+ * Occurs when two Tara Grahas (Mars, Mercury, Jupiter, Venus, Saturn)
+ * are within 1 degree of each other.
  */
-export function calculate_yoga(
-  jd: number,
-  ayanamsha_mode: AyanamshaMode,
-): YogaInfo;
+export function check_graha_yuddha(jd: number, ayan_mode: number): any;
 /**
  * Calculate Rahu Kaal for a given day
  * sunrise_ms and sunset_ms are Unix timestamps in milliseconds
@@ -82,88 +114,34 @@ export function calculate_gulika(
   sunset_ms: number,
   weekday: number,
 ): TimeInterval;
-/**
- * Swiss Ephemeris Raw API
- *
- * This module exposes a 1:1 mapping of the C API where possible,
- * adapting pointers to JS Objects/Arrays for ease of use.
- * Function names are prefixed with `js_` internally to avoid linker collisions
- * with the C library, but exported with original names via `js_name`.
- * Calculate planetary position (UT)
- * Returns: { longitude, latitude, distance, speed_long, speed_lat, speed_dist, rc_flags }
- * Throws string error on failure
- */
-export function raw_swe_calc_ut(
-  tjd_ut: number,
-  ipl: number,
-  iflag: number,
-): any;
-/**
- * Calculate fixed star position
- */
-export function raw_swe_fixstar_ut(
-  star: string,
-  tjd_ut: number,
-  iflag: number,
-): any;
-export function raw_swe_sidtime(tjd_ut: number): number;
-export function raw_swe_julday(
+export function swe_calc_ut(tjd_ut: number, ipl: number, iflag: number): any;
+export function swe_julday(
   year: number,
   month: number,
   day: number,
   hour: number,
   gregflag: number,
 ): number;
-export function raw_swe_revjul(tjd: number, gregflag: number): any;
-/**
- * Calculate phenomena (phase, eclipse, etc.)
- * Returns: { phase_angle, phase, elongation, diameter_app, magnitude }
- */
-export function raw_swe_pheno_ut(
+export function swe_revjul(tjd: number, gregflag: number): any;
+export function swe_fixstar_ut(
+  star: string,
   tjd_ut: number,
-  ipl: number,
   iflag: number,
 ): any;
-export function raw_swe_get_planet_name(ipl: number): string;
-export function raw_swe_set_topo(lon: number, lat: number, alt: number): void;
-export function raw_swe_set_sid_mode(
+export function swe_pheno_ut(tjd_ut: number, ipl: number, iflag: number): any;
+export function swe_set_topo(
+  geolon: number,
+  geolat: number,
+  geoalt: number,
+): void;
+export function swe_set_sid_mode(
   sid_mode: number,
   t0: number,
   ayan_t0: number,
 ): void;
-export function raw_swe_get_ayanamsa_ut(tjd_ut: number): number;
-/**
- * Calculate Vara (weekday) for a given Julian Day
- * Note: This returns the astronomical weekday.
- * For Vedic Vara, compare with sunrise time.
- */
-export function calculate_vara(jd: number): VaraInfo;
-/**
- * Calculate Raahu, Yamaganda, and Gulika for a given day
- *
- * # Arguments
- * * `sunrise_ms` - Unix timestamp of sunrise in ms
- * * `sunset_ms` - Unix timestamp of sunset in ms
- * * `weekday` - 0=Sunday, 1=Monday, ..., 6=Saturday
- */
-export function calculate_muhurats(
-  sunrise_ms: number,
-  sunset_ms: number,
-  weekday: number,
-): DayMuhurats;
-/**
- * Calculate Nakshatra for a given Julian Day
- * Each Nakshatra spans 13°20' (13.333... degrees)
- */
-export function calculate_nakshatra(
-  jd: number,
-  ayanamsha_mode: AyanamshaMode,
-): NakshatraInfo;
-/**
- * Calculate Tithi for a given Julian Day
- * Returns TithiInfo with index, name, paksha, and completion percentage
- */
-export function calculate_tithi(jd: number): TithiInfo;
+export function swe_get_ayanamsa_ut(tjd_ut: number): number;
+export function swe_get_planet_name(ipl: number): string;
+export function swe_sidtime(tjd_ut: number): number;
 /**
  * Ayanamsha modes
  */

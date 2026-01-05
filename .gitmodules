@@ -1,0 +1,3 @@
+[submodule "swisseph-wasm/vendor/swisseph"]
+	path = swisseph-wasm/vendor/swisseph
+	url = https://github.com/aloistr/swisseph

@@ -1,7 +1,7 @@
 use wasm_bindgen::prelude::*;
 use serde::{Deserialize, Serialize};
 use crate::{Location, calculate_sunrise, calculate_sunset};
-use crate::vedic::{tithi, nakshatra, yoga, karana, vara, muhurat};
+use crate::vedic::{tithi, nakshatra, yoga, vara, muhurat};
 use crate::astronomy::{ayanamsha, solver};
 use crate::astronomy::planets::{self, PlanetId};
 use crate::astronomy::ayanamsha::AyanamshaMode;

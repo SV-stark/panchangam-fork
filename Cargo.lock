@@ -284,8 +284,6 @@ checksum = "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d"
 name = "panchangam"
 version = "0.1.0"
 dependencies = [
- "bindgen",
- "cc",
  "chrono",
  "js-sys",
  "libc",
@@ -293,6 +291,7 @@ dependencies = [
  "serde",
  "serde-wasm-bindgen",
  "spa",
+ "swisseph-wasm",
  "wasm-bindgen",
 ]
 
@@ -433,6 +432,17 @@ checksum = "b23404f558ad79b3699cf61d6f2d65a64c1bd63249c1ef70321fec26933abd36"
 dependencies = [
  "chrono",
  "thiserror",
+]
+
+[[package]]
+name = "swisseph-wasm"
+version = "0.1.0"
+dependencies = [
+ "bindgen",
+ "cc",
+ "js-sys",
+ "libm",
+ "wasm-bindgen",
 ]
 
 [[package]]

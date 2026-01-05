@@ -40,7 +40,12 @@ This produces `lib/panchangam.js` and `lib/panchangam.wasm`.
 ### Basic Example
 
 ```typescript
-import { calculate_daily_panchang, Location } from "./lib/panchangam.js";
+import {
+  calculate_daily_panchang,
+  Location,
+  swe_calc_ut,
+  swe_julday,
+} from "./lib/panchangam.js";
 
 // Location: Bangalore (12.97 N, 77.59 E)
 const loc = new Location(12.9716, 77.5946, 920.0);
@@ -68,9 +73,9 @@ console.log(`Rahu Kalam: ${new Date(m.rahu_kalam.start).toLocaleTimeString()}`);
 ### Planetary War
 
 ```typescript
-import { check_graha_yuddha, raw_swe_julday } from "./lib/panchangam.js";
+import { check_graha_yuddha, swe_julday } from "./lib/panchangam.js";
 
-const jd = raw_swe_julday(2024, 2, 22, 12.0, 1);
+const jd = swe_julday(2024, 2, 22, 12.0, 1);
 const wars = check_graha_yuddha(jd, 1); // 1 = Lahiri
 
 if (wars.length > 0) {
@@ -99,16 +104,15 @@ deno task build
 
 This command:
 
-1. Compiles the Swiss Ephemeris C source inside `src/libswe`.
+1. Compiles the Swiss Ephemeris C source inside `swisseph-wasm`.
 2. Compiles the Rust crate and links the C library.
 3. Generates the Wasm binary and JS bindings in `lib/`.
 
 ## 📂 Project Structure
 
-- `src/lib.rs`: Wasm entry point.
-- `src/vedic/`: Core Vedic logic (Tithi, Yoga, Muhurat, Graha Yuddha).
-- `src/astronomy/`: Astronomy wrappers (Planets, Solver, Ayanamsha).
-- `src/libswe/`: Vendored Swiss Ephemeris C source.
+- `swisseph-wasm/`: Core Swiss Ephemeris bindings & C source.
+- `src/lib.rs`: `panchangam` Wasm entry point.
+- `src/vedic/`: Core Vedic logic.
 - `examples/`: TypeScript verification scripts.
 
 ## License

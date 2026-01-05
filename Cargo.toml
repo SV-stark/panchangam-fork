@@ -6,17 +6,23 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+
+[workspace]
+members = ["swisseph-wasm"]
+
 [dependencies]
+swisseph-wasm = { path = "./swisseph-wasm" }
 wasm-bindgen = "=0.2.105"
 js-sys = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde-wasm-bindgen = "0.6"
 spa = "0.5.1"
+# libc and libm were for internal C shims, potentially still needed for other reasons or can be removed if strictly delegation
 libc = "0.2"
 libm = "0.2.15"
 
+# Build dependencies are no longer needed for compilation of C code here, BUT 
+# if we rely on the sub-crate to build the C code, good.
+# However, we should remove the cc/bindgen from HERE if we are not building C code in THIS crate.
 
-[build-dependencies]
-cc = "1.0"
-bindgen = "0.69"

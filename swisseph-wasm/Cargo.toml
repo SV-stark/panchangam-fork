@@ -1,0 +1,17 @@
+[package]
+name = "swisseph-wasm"
+version = "0.1.0"
+edition = "2021"
+description = "Swiss Ephemeris Bindings for WebAssembly"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2.99"
+js-sys = "0.3.76"
+libm = "0.2"
+
+[build-dependencies]
+cc = "1.0"
+bindgen = "0.69"
