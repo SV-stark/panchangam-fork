@@ -1,29 +1,20 @@
 # Panchangam (Wasm)
 
-A high-precision, high-performance Vedic Astrology and Calendar library for the
-web and server-side environments (Deno, Node.js, Cloudflare Workers).
+Vedic Astrology and Calendar library backed by Swiss Ephemeris, compiled to
+WebAssembly for edge/serverless environments.
 
-It is built with **Rust** and compiled to **WebAssembly**, integrating the
-gold-standard **Swiss Ephemeris** (C library) for astronomical accuracy
-(`Drik Ganita`).
+## Features
 
-## 🚀 Features
-
-- **High Precision**: Uses Swiss Ephemeris (vsop87) for planetary positions.
-- **Zero External Dependencies**: All logic and ephemerides are bundled into the
-  Wasm binary.
-- **Vedic Calendar (Panchang)**:
-  - **Tithi**: Lunar day with exact end times (Root Finding).
-  - **Nakshatra**: Lunar mansion with exact end times.
-  - **Yoga**: Luni-solar combination with exact end times.
-  - **Vara**: Weekday based on Sunrise.
-  - **Udaya Logic**: Correctly identifies properties active at sunrise.
-- **Advanced Astronomy**:
-  - **Graha Yuddha**: Planetary War detection for Tara Grahas.
-  - **Ayanamsha**: Supports Lahiri, Raman, KP, True Chitrapaksha.
-  - **Planetary Positions**: Sidereal and Tropical longitudes.
-- **Muhurat Matrix**: dynamic calculation of Rahu Kalam, Yamaganda, Gulika based
-  on actual day duration.
+- **Swiss Ephemeris v2.10.03**: C library statically linked via `swisseph-wasm`.
+- **Wasm-First**: Built for Deno, Node.js, and Cloudflare Workers.
+- **Vedic Calendar**:
+  - Root-finding (binary search) for exact Tithi, Nakshatra, Yoga end times.
+  - Sunrise/Sunset calculations via SPA (Solar Position Algorithm).
+- **Astronomy**:
+  - Sidereal/Tropical conversions.
+  - High-precision planetary positions (vsop87/jpl).
+  - Graha Yuddha (Planetary War) detection.
+- **Muhurat**: Dynamic calculation of Rahu Kalam, Yamaganda, Gulika.
 
 ## 📦 Usage
 

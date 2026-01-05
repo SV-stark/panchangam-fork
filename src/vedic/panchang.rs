@@ -52,6 +52,9 @@ pub fn calculate_daily_panchang(
     location: &Location, 
     ayan_mode: i32
 ) -> Result<DailyPanchang, JsValue> {
+
+
+    // Ayanamsha mode selection
     let mode = match ayan_mode {
         1 => AyanamshaMode::Lahiri,
         3 => AyanamshaMode::Raman,
@@ -60,29 +63,21 @@ pub fn calculate_daily_panchang(
         _ => AyanamshaMode::Lahiri,
     };
 
-    // 1. Calculate Sunrise
     let sunrise_ms = calculate_sunrise(year, month, day, location);
     if sunrise_ms.is_nan() {
         return Err(JsValue::from_str("Sunrise calculation failed (polar region?)"));
     }
     
-    // JD at sunrise (convert ms to JD)
-    // JD = (ms / 86400000) + 2440587.5
+    // Julian Day at Sunrise
     let sunrise_jd = (sunrise_ms / 86_400_000.0) + 2440587.5;
-
-    // 2. Ayanamsha at Sunrise
     let ayan_val = ayanamsha::get_ayanamsha(mode, sunrise_jd);
 
-    // 3. Udaya Tithi (Tithi at Sunrise)
+    // Tithi at Sunrise
     let t_info = tithi::calculate_tithi(sunrise_jd);
     let tithi_idx = t_info.index;
     
-    // Find Tithi End Time
-    // Tithi 1 (0-12) ends at 12. Tithi 14 (156-168) ends at 168.
-    // Target is simply tithi_idx * 12.0
-    // If Tithi 30 (348-360), target is 360.0 (which solver handles as 0 via period if needed, 
-    // but better to keep it 360 and let diff handle it).
-    
+    // Calculate Tithi end time using binary search
+    // Target is simply next integer index * 12 degrees
     let tithi_idx_val = tithi_idx as f64;
     let target_angle = tithi_idx_val * 12.0;
     
@@ -104,20 +99,16 @@ pub fn calculate_daily_panchang(
     );
     let tithi_end_ms = t_end_jd.map(|jd| (jd - 2440587.5) * 86_400_000.0);
 
-
-    // 4. Udaya Nakshatra
+    // Nakshatra at Sunrise
     let n_info = nakshatra::calculate_nakshatra(sunrise_jd, mode);
-    let n_idx = n_info.index; // 1-27
-    
-    // Target: next nakshatra start. 
-    // Index 1 ends at 13.33. Index 5 ends at 5 * 13.33.
+    let n_idx = n_info.index;
     let nak_len = 360.0 / 27.0;
     let target_nak_angle = (n_idx as f64) * nak_len;
     
     let n_end_jd = solver::find_crossing_time(
         |jd| {
             let moon = planets::get_planet_position_sidereal(PlanetId::Moon, jd, ayanamsha::get_ayanamsha(mode, jd));
-            moon.longitude // 0-360
+            moon.longitude
         },
         sunrise_jd,
         search_end_jd,
@@ -126,10 +117,9 @@ pub fn calculate_daily_panchang(
     );
     let nak_end_ms = n_end_jd.map(|jd| (jd - 2440587.5) * 86_400_000.0);
 
-
-    // 5. Udaya Yoga
+    // Yoga at Sunrise
     let y_info = yoga::calculate_yoga(sunrise_jd, mode);
-    let y_idx = y_info.index; // 1-27
+    let y_idx = y_info.index;
     let yoga_len = 360.0 / 27.0;
     let target_yoga_angle = (y_idx as f64) * yoga_len;
     
@@ -149,22 +139,12 @@ pub fn calculate_daily_panchang(
 
     let yoga_end_ms = y_end_jd.map(|jd| (jd - 2440587.5) * 86_400_000.0);
 
-
-    // 6. Vara (Weekday)
+    // Vara (Weekday)
     let v_info = vara::calculate_vara(sunrise_jd);
-    
-    // 7. Muhurats
-    // Need 0-6 weekday for muhurat calc. 
-    // `swe_julday` takes 12h, so day changes at noon? No, julian day standard.
-    // Let's use `vara::calculate_vara`'s id (0=Sunday?)
-    // Actually vara module might return name. Let's check `swe_julday` -> weekday logic or use day of week from cal.
-    // Assuming `vara::calculate_vara` behaves correctly.
-    // For simplicity: (jd + 1.5) % 7 gives 0=Sunday.
     let weekday_idx = ((sunrise_jd + 1.5).floor() as i64 % 7) as u8;
     
-    // Sunset needed for duration
+    // Muhurats
     let sunset_ms = calculate_sunset(year, month, day, location);
-    
     let muhurats = muhurat::calculate_muhurats(sunrise_ms, sunset_ms, weekday_idx);
 
     Ok(DailyPanchang {

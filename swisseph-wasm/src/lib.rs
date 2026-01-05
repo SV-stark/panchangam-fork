@@ -7,22 +7,22 @@ use core::ffi::CStr;
 use js_sys::{Object, Reflect};
 
 // Include generated Swiss Ephemeris bindings
+pub mod bindings;
+
 #[allow(dead_code, non_upper_case_globals, non_camel_case_types, non_snake_case)]
 pub mod swe_bindings {
-    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+    pub use crate::bindings::*;
 
-    // Aliases to maintain Rust API compatibility
-    pub use impl_swe_version as swe_version;
-    pub use impl_swe_julday as swe_julday;
-    pub use impl_swe_calc_ut as swe_calc_ut;
-    pub use impl_swe_pheno_ut as swe_pheno_ut;
-    pub use impl_swe_set_sid_mode as swe_set_sid_mode;
-    pub use impl_swe_get_ayanamsa_ut as swe_get_ayanamsa_ut;
-    pub use impl_swe_revjul as swe_revjul;
-    pub use impl_swe_fixstar_ut as swe_fixstar_ut;
-    pub use impl_swe_sidtime as swe_sidtime;
-    pub use impl_swe_get_planet_name as swe_get_planet_name;
-    pub use impl_swe_set_topo as swe_set_topo;
+    // Constants (Manually replicated from swephexp.h)
+    pub const SE_SUN: i32 = 0;
+    pub const SE_MOON: i32 = 1;
+    pub const SE_GREG_CAL: i32 = 1;
+    pub const SEFLG_SWIEPH: i32 = 2;
+    pub const SEFLG_SPEED: i32 = 256;
+    pub const SE_SIDM_LAHIRI: i32 = 1;
+    pub const SE_SIDM_RAMAN: i32 = 3;
+    pub const SE_SIDM_KRISHNAMURTI: i32 = 5;
+    pub const SE_SIDM_TRUE_CITRA: i32 = 27;
 }
 
 // --- EXPORTS (Renamed to swe_*) ---

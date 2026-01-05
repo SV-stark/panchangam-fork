@@ -26,7 +26,7 @@ fn main() {
     // Define macros
     build.define("NO_MOSHIER", None); // Use JPL ephemeris only
 
-    // Rename colliding symbols (Apply Globally to match Bindings)
+    // Rename colliding symbols
     let renaming = [
         ("swe_calc_ut", "impl_swe_calc_ut"),
         ("swe_julday", "impl_swe_julday"),
@@ -67,46 +67,4 @@ fn main() {
     }
 
     build.compile("swe");
-
-    // Generate Bindings
-    let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    let wasm_includes = PathBuf::from(&manifest_dir).join("wasm-includes");
-    
-    // Wrapper is now in wrapper directory
-    let header_path = format!("{}/swe_wrapper.h", wrapper_src);
-    
-    println!("cargo:warning=Generating bindings from {}", header_path);
-    
-    let bindings = bindgen::Builder::default()
-        .header(header_path)
-        .clang_arg(format!("-I{}", swe_src))
-        .clang_arg(format!("-I{}", wrapper_src))
-        .clang_arg(format!("-I{}", wasm_includes.display()))
-        .clang_arg("-Dswe_calc_ut=impl_swe_calc_ut")
-        .clang_arg("-Dswe_julday=impl_swe_julday")
-        .clang_arg("-Dswe_revjul=impl_swe_revjul")
-        .clang_arg("-Dswe_fixstar_ut=impl_swe_fixstar_ut")
-        .clang_arg("-Dswe_pheno_ut=impl_swe_pheno_ut")
-        .clang_arg("-Dswe_set_topo=impl_swe_set_topo")
-        .clang_arg("-Dswe_set_sid_mode=impl_swe_set_sid_mode")
-        .clang_arg("-Dswe_get_ayanamsa_ut=impl_swe_get_ayanamsa_ut")
-        .clang_arg("-Dswe_get_planet_name=impl_swe_get_planet_name")
-        .clang_arg("-Dswe_sidtime=impl_swe_sidtime")
-        .clang_arg("-Dswe_version=impl_swe_version")
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
-        .use_core()
-        .ctypes_prefix("libc")
-        .generate_comments(false)
-        .layout_tests(false)
-        .derive_debug(false)
-        .generate()
-        .expect("Unable to generate bindings");
-
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let bindings_path = out_path.join("bindings.rs");
-    bindings
-        .write_to_file(&bindings_path)
-        .expect("Couldn't write bindings!");
-    
-    println!("cargo:warning=Bindings written to {:?}", bindings_path);
 }

@@ -1,0 +1,120 @@
+name: CI/CD
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # For JSR publishing
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v2.x
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          override: true
+
+      - name: Install Clang
+        run: sudo apt-get update && sudo apt-get install -y clang lld
+
+      - name: Build Wasm
+        run: deno task build
+
+      - name: Verify Demo
+        run: deno run -A examples/demo.ts
+
+  publish-crates:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          override: true
+      
+      - name: Install Clang
+        run: sudo apt-get update && sudo apt-get install -y clang lld
+
+      - name: Publish swisseph-wasm
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          if [ -n "$CARGO_REGISTRY_TOKEN" ]; then
+            cd swisseph-wasm
+            cargo publish --allow-dirty || echo "Publish failed (likely version exists)"
+          else
+            echo "Skipping crates.io publish (no token)"
+          fi
+
+      - name: Publish panchangam
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          if [ -n "$CARGO_REGISTRY_TOKEN" ]; then
+            cargo publish --allow-dirty || echo "Publish failed (likely version exists)"
+          else
+            echo "Skipping crates.io publish (no token)"
+          fi
+
+  publish-jsr:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v2.x
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          override: true
+          
+      - name: Install Clang
+        run: sudo apt-get update && sudo apt-get install -y clang lld
+
+      - name: Build for JSR
+        run: deno task build
+
+      - name: Publish to JSR
+        run: npx jsr publish --allow-dirty || echo "JSR publish skipped/failed"
