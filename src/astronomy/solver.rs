@@ -69,3 +69,41 @@ fn normalize_relative(val: f64, ref_val: f64, period: f64) -> f64 {
     }
     ref_val + diff
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::f64::consts::PI;
+
+    #[test]
+    fn test_find_crossing_linear() {
+        // Find where 2*x = 10. Should be 5.0.
+        // Normalized: (2*x - 10) should be 0.
+        let result = find_crossing_time(
+            |x| 2.0 * x,
+            0.0,
+            10.0,
+            10.0,
+            0.0 // No wrap period
+        );
+        assert!(result.is_some());
+        let val = result.unwrap();
+        assert!((val - 5.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_find_crossing_sine() {
+        // Find where sin(x) = 0.5 in [0, PI]. Should be PI/6 (0.52359...) and 5*PI/6.
+        // Our solver finds *one* crossing.
+        let result = find_crossing_time(
+            |x| x.sin(),
+            0.0,
+            PI/2.0,
+            0.5,
+            0.0
+        );
+        assert!(result.is_some());
+        let val = result.unwrap();
+        assert!((val - PI/6.0).abs() < 1e-4);
+    }
+}
