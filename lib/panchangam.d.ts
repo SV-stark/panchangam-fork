@@ -11,6 +11,73 @@ export function calculate_nakshatra(
   ayanamsha_mode: AyanamshaMode,
 ): NakshatraInfo;
 /**
+ * Swiss Ephemeris Raw API
+ *
+ * This module exposes a 1:1 mapping of the C API where possible,
+ * adapting pointers to JS Objects/Arrays for ease of use.
+ * Function names are prefixed with `js_` internally to avoid linker collisions
+ * with the C library, but exported with original names via `js_name`.
+ * Calculate planetary position (UT)
+ * Returns: { longitude, latitude, distance, speed_long, speed_lat, speed_dist, rc_flags }
+ * Throws string error on failure
+ */
+export function raw_swe_calc_ut(
+  tjd_ut: number,
+  ipl: number,
+  iflag: number,
+): any;
+/**
+ * Calculate fixed star position
+ */
+export function raw_swe_fixstar_ut(
+  star: string,
+  tjd_ut: number,
+  iflag: number,
+): any;
+export function raw_swe_sidtime(tjd_ut: number): number;
+export function raw_swe_julday(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  gregflag: number,
+): number;
+export function raw_swe_revjul(tjd: number, gregflag: number): any;
+/**
+ * Calculate phenomena (phase, eclipse, etc.)
+ * Returns: { phase_angle, phase, elongation, diameter_app, magnitude }
+ */
+export function raw_swe_pheno_ut(
+  tjd_ut: number,
+  ipl: number,
+  iflag: number,
+): any;
+export function raw_swe_get_planet_name(ipl: number): string;
+export function raw_swe_set_topo(lon: number, lat: number, alt: number): void;
+export function raw_swe_set_sid_mode(
+  sid_mode: number,
+  t0: number,
+  ayan_t0: number,
+): void;
+export function raw_swe_get_ayanamsa_ut(tjd_ut: number): number;
+/**
+ * Calculate Tithi for a given Julian Day
+ * Returns TithiInfo with index, name, paksha, and completion percentage
+ */
+export function calculate_tithi(jd: number): TithiInfo;
+/**
+ * Calculate Yoga for a given Julian Day
+ * Formula: Yoga = floor((Moon_long + Sun_long) / 13.333) + 1
+ */
+export function calculate_yoga(
+  jd: number,
+  ayanamsha_mode: AyanamshaMode,
+): YogaInfo;
+/**
+ * Get Ayanamsha value for a given mode and Julian Day
+ */
+export function get_ayanamsha(mode: AyanamshaMode, jd: number): number;
+/**
  * Calculate Rahu Kaal for a given day
  * sunrise_ms and sunset_ms are Unix timestamps in milliseconds
  * weekday is 0=Sunday, 6=Saturday
@@ -37,20 +104,6 @@ export function calculate_gulika(
   weekday: number,
 ): TimeInterval;
 /**
- * Get Ayanamsha value for a given mode and Julian Day
- */
-export function get_ayanamsha(mode: AyanamshaMode, jd: number): number;
-/**
- * Calculate Tithi for a given Julian Day
- * Returns TithiInfo with index, name, paksha, and completion percentage
- */
-export function calculate_tithi(jd: number): TithiInfo;
-/**
- * Calculate Karana for a given Julian Day
- * There are 60 Karanas per lunar month (2 per Tithi)
- */
-export function calculate_karana(jd: number): KaranaInfo;
-/**
  * Get the library version from Swiss Ephemeris
  */
 export function get_version(): string;
@@ -75,13 +128,10 @@ export function calculate_sunset(
   location: Location,
 ): number;
 /**
- * Calculate Yoga for a given Julian Day
- * Formula: Yoga = floor((Moon_long + Sun_long) / 13.333) + 1
+ * Calculate Karana for a given Julian Day
+ * There are 60 Karanas per lunar month (2 per Tithi)
  */
-export function calculate_yoga(
-  jd: number,
-  ayanamsha_mode: AyanamshaMode,
-): YogaInfo;
+export function calculate_karana(jd: number): KaranaInfo;
 /**
  * Calculate Vara (weekday) for a given Julian Day
  * Note: This returns the astronomical weekday.

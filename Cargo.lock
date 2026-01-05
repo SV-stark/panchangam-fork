@@ -287,6 +287,7 @@ dependencies = [
  "bindgen",
  "cc",
  "chrono",
+ "js-sys",
  "libc",
  "libm",
  "serde",

@@ -34,13 +34,21 @@ mod swe_bindings {
         pub fn swe_pheno_ut(tjd_ut: f64, ipl: i32, iflag: i32, attr: *mut f64, serr: *mut i8) -> i32;
         pub fn swe_set_sid_mode(sid_mode: i32, t0: f64, ayan_t0: f64);
         pub fn swe_get_ayanamsa_ut(tjd_ut: f64) -> f64;
+        pub fn swe_revjul(tjd: f64, gregflag: i32, year: *mut i32, month: *mut i32, day: *mut i32, hour: *mut f64);
+        pub fn swe_fixstar_ut(star: *mut i8, tjd_ut: f64, iflag: i32, xx: *mut f64, serr: *mut i8) -> i32;
+        pub fn swe_sidtime(tjd_ut: f64) -> f64;
+        pub fn swe_get_planet_name(ipl: i32, spname: *mut i8) -> *mut i8;
+        pub fn swe_set_topo(geolon: f64, geolat: f64, geoalt: f64);
     }
 }
+
+
 
 pub mod astronomy;
 pub mod vedic;
 pub mod geo;
 pub mod muhurat;
+pub mod raw;
 
 /// Get the library version from Swiss Ephemeris
 #[wasm_bindgen]
@@ -52,6 +60,8 @@ pub fn get_version() -> String {
     let c_str = unsafe { core::ffi::CStr::from_ptr(buf.as_ptr()) };
     String::from(c_str.to_str().unwrap_or("Unknown"))
 }
+
+
 
 /// Location struct for geo-spatial calculations
 #[derive(Debug, Clone, Serialize, Deserialize)]
