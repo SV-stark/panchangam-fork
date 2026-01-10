@@ -1,5 +1,9 @@
 # Panchangam (Wasm)
 
+[![JSR](https://jsr.io/badges/@fusionstrings/panchangam)](https://jsr.io/@fusionstrings/panchangam)
+[![NPM](https://img.shields.io/npm/v/@fusionstrings/panchangam)](https://www.npmjs.com/package/@fusionstrings/panchangam)
+[![Crates.io](https://img.shields.io/crates/v/panchangam)](https://crates.io/crates/panchangam)
+
 > **High-Precision Vedic Astrology & Calendar Library**
 >
 > _Powered by Swiss Ephemeris | Compiled to WebAssembly | Built for the Edge_
