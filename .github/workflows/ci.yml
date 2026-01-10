@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: ["creation", "swisseph-wasm"]
+    branches: ["creation"]
   pull_request:
-    branches: ["creation", "swisseph-wasm"]
+    branches: ["creation"]
   release:
     types: [created]
 
@@ -19,8 +19,6 @@ jobs:
     steps:
       - name: Git Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Setup Deno
         uses: denoland/setup-deno@v1
@@ -31,6 +29,9 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
 
       - name: Install LLVM (Clang)
         run: |
@@ -52,6 +53,7 @@ jobs:
         run: deno task build:npm
 
       - name: Check Version Consistency
+        if: github.event_name == 'release' && github.event.action == 'created'
         run: deno task check-version
 
       - name: Verify Artifacts
@@ -60,48 +62,15 @@ jobs:
           test -f npm/package.json
           test -f npm/panchangam.js
 
-  build-publish-artifacts:
-    name: Build Publish Artifacts
-    if: github.event_name == 'release' && github.event.action == 'created'
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-      - name: Git Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Setup Deno
-        uses: denoland/setup-deno@v1
-        with:
-          deno-version: v2.x
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-
-      - name: Install LLVM (Clang)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y llvm clang
-
-      - name: Build WASM
-        run: deno task build
-        env:
-          CC: clang
-
-      - name: Build NPM Package
-        run: deno task build:npm
-
       - name: Upload lib artifacts
+        if: github.event_name == 'release' && github.event.action == 'created'
         uses: actions/upload-artifact@v4
         with:
           name: lib-artifacts
           path: lib/
 
       - name: Upload npm artifacts
+        if: github.event_name == 'release' && github.event.action == 'created'
         uses: actions/upload-artifact@v4
         with:
           name: npm-artifacts
@@ -118,11 +87,17 @@ jobs:
     steps:
       - name: Git Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
         with:
-          submodules: recursive
+          deno-version: v2.x
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Check Version Consistency
+        run: deno task check-version
 
       - name: Publish to Crates.io
         run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
@@ -131,7 +106,7 @@ jobs:
     name: Publish to JSR
     if: github.event_name == 'release' && github.event.action == 'created'
     runs-on: ubuntu-latest
-    needs: build-publish-artifacts
+    needs: build
     permissions:
       contents: read
       id-token: write
@@ -145,14 +120,14 @@ jobs:
         with:
           deno-version: v2.x
 
+      - name: Check Version Consistency
+        run: deno task check-version
+
       - name: Download lib artifacts
         uses: actions/download-artifact@v4
         with:
           name: lib-artifacts
           path: lib/
-
-      - name: Check Version Consistency
-        run: deno task check-version
 
       - name: Publish to JSR
         run: deno publish
@@ -161,7 +136,7 @@ jobs:
     name: Publish to NPM
     if: github.event_name == 'release' && github.event.action == 'created'
     runs-on: ubuntu-latest
-    needs: build-publish-artifacts
+    needs: build
 
     steps:
       - name: Download npm artifacts
@@ -175,3 +150,4 @@ jobs:
           cd npm
           npm config set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
           npm publish --access public
+
