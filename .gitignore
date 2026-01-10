@@ -2,3 +2,4 @@
 /npm
 /lib
 node_modules
+.env
