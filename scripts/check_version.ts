@@ -18,6 +18,19 @@ async function checkVersion() {
   console.log(`Deno version: ${denoVersion}`);
 
   assertEquals(cargoVersion, denoVersion, "Versions do not match!");
+
+  // Check against tag if provided as argument
+  if (Deno.args.length > 0) {
+    let tag = Deno.args[0];
+    // Remove 'v' prefix if present
+    if (tag.startsWith("v")) {
+      tag = tag.substring(1);
+    }
+    console.log(`Tag version: ${tag}`);
+    assertEquals(tag, cargoVersion, "Tag does not match Cargo version!");
+    assertEquals(tag, denoVersion, "Tag does not match Deno version!");
+  }
+
   console.log("Versions match.");
 }
 

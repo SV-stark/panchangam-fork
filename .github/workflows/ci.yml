@@ -97,7 +97,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Check Version Consistency
-        run: deno task check-version
+        run: deno task check-version ${{ github.ref_name }}
 
       - name: Publish to Crates.io
         run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
@@ -121,7 +121,7 @@ jobs:
           deno-version: v2.x
 
       - name: Check Version Consistency
-        run: deno task check-version
+        run: deno task check-version ${{ github.ref_name }}
 
       - name: Download lib artifacts
         uses: actions/download-artifact@v4
