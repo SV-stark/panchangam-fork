@@ -16,7 +16,12 @@ Deno.test("Swiss Ephemeris Version", () => {
 Deno.test("Library Version", () => {
   const ver = get_version();
   console.log(`Panchangam Version: ${ver}`);
-  assertEquals(ver, "0.1.0");
+
+  // Dynamic check against deno.json
+  const denoConfig = JSON.parse(
+    Deno.readTextFileSync(new URL("../deno.json", import.meta.url)),
+  );
+  assertEquals(ver, denoConfig.version);
 });
 
 Deno.test("Sunrise/Sunset Calculation", () => {
