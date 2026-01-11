@@ -31,7 +31,26 @@ async function checkVersion() {
     assertEquals(tag, denoVersion, "Tag does not match Deno version!");
   }
 
-  console.log("Versions match.");
+  console.log("Versions match (Cargo <-> Deno).");
+
+  // Check npm/package.json if it exists
+  try {
+    const npmPackageRaw = await Deno.readFile("npm/package.json");
+    const npmPackage = JSON.parse(textDecoder.decode(npmPackageRaw));
+    const npmVersion = npmPackage.version;
+    console.log(`NPM version: ${npmVersion}`);
+    assertEquals(
+      denoVersion,
+      npmVersion,
+      "NPM package version does not match Deno version!",
+    );
+  } catch (e) {
+    if (e instanceof Deno.errors.NotFound) {
+      console.log("Skipping NPM check (npm/package.json not found).");
+    } else {
+      throw e;
+    }
+  }
 }
 
 if (import.meta.main) {

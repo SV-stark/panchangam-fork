@@ -99,6 +99,7 @@
       "jsr:@deno/wasmbuild@0.20.0",
       "jsr:@std/assert@1",
       "jsr:@std/fs@1",
+      "jsr:@std/path@1",
       "jsr:@std/toml@1"
     ]
   }
