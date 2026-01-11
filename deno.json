@@ -1,7 +1,7 @@
 {
   "tasks": {
-    "build": "deno run -A jsr:@deno/wasmbuild -p panchangam",
-    "build:inline": "deno run -A jsr:@deno/wasmbuild --inline -p panchangam",
+    "build": "deno run -A jsr:@deno/wasmbuild -p panchangam --out lib",
+    "build:inline": "deno run -A jsr:@deno/wasmbuild --inline -p panchangam --out lib/browser",
     "build:npm": "deno run -A scripts/build_npm.ts",
     "check-version": "deno run -A scripts/check_version.ts",
     "test": "deno test -A",
@@ -12,7 +12,8 @@
   "license": "MIT",
   "exports": {
     ".": "./lib/panchangam.js",
-    "./panchangam.wasm": "./lib/panchangam.wasm"
+    "./browser": "./lib/browser/panchangam.js",
+    "./wasm": "./lib/panchangam.wasm"
   },
   "publish": {
     "include": [
@@ -20,6 +21,9 @@
       "lib/panchangam.internal.js",
       "lib/panchangam.d.ts",
       "lib/panchangam.wasm",
+      "lib/browser/panchangam.js",
+      "lib/browser/panchangam.internal.js",
+      "lib/browser/panchangam.d.ts",
       "README.md",
       "LICENSE",
       "deno.json"

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panchangam Browser Test</title>
+  </head>
+  <body>
+    <h1>Panchangam Browser Integration Test</h1>
+    <div id="output">Running...</div>
+    <script type="module">
+      import {
+        calculate_daily_panchang,
+        get_swisseph_version,
+        Location,
+      } from "./lib/browser/panchangam.js";
+
+      try {
+        const loc = new Location(12.97, 77.59, 920);
+        const result = calculate_daily_panchang(2026, 1, 5, loc, 1);
+        const version = get_swisseph_version();
+
+        const output = document.getElementById("output");
+        output.innerHTML = `
+                <p style="color: green"><strong>Success!</strong></p>
+                <ul>
+                    <li>Swisseph Version: ${version}</li>
+                    <li>Date: ${result.date}</li>
+                    <li>Tithi: ${result.tithi_name}</li>
+                </ul>
+            `;
+        console.log("Test Passed", result);
+      } catch (e) {
+        const output = document.getElementById("output");
+        output.innerHTML =
+          `<p style="color: red"><strong>Failed!</strong> ${e.message}</p>`;
+        console.error(e);
+      }
+    </script>
+  </body>
+</html>
