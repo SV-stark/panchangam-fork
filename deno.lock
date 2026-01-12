@@ -3,14 +3,13 @@
   "specifiers": {
     "jsr:@david/path@0.2": "0.2.0",
     "jsr:@david/temp@~0.1.1": "0.1.1",
-    "jsr:@deno/wasmbuild@0.20.0": "0.20.0",
+    "jsr:@deno/wasmbuild@0.21.0": "0.21.0",
     "jsr:@std/assert@^1.0.16": "1.0.16",
     "jsr:@std/cli@^1.0.11": "1.0.25",
     "jsr:@std/encoding@^1.0.6": "1.0.10",
     "jsr:@std/fmt@^1.0.4": "1.0.8",
     "jsr:@std/fs@1": "1.0.21",
     "jsr:@std/fs@^1.0.10": "1.0.21",
-    "jsr:@std/fs@^1.0.21": "1.0.21",
     "jsr:@std/internal@^1.0.12": "1.0.12",
     "jsr:@std/path@1": "1.1.4",
     "jsr:@std/path@^1.1.4": "1.1.4",
@@ -31,8 +30,8 @@
         "jsr:@david/path"
       ]
     },
-    "@deno/wasmbuild@0.20.0": {
-      "integrity": "4b9cc0c071b6ac7df7b0d6e117ea39fe269c38708ea5c35b9765533a9ca94766",
+    "@deno/wasmbuild@0.21.0": {
+      "integrity": "c31641c6bd1de27bb23e1cc7969d73331b3798711c5f23ce5841a4cf1c996265",
       "dependencies": [
         "jsr:@david/path",
         "jsr:@david/temp",
@@ -86,7 +85,7 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@deno/wasmbuild@0.20.0",
+      "jsr:@deno/wasmbuild@0.21.0",
       "jsr:@std/assert@^1.0.16",
       "jsr:@std/fs@^1.0.21",
       "jsr:@std/path@^1.1.4",

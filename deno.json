@@ -43,6 +43,6 @@
     "@std/path": "jsr:@std/path@^1.1.4",
     "@std/toml": "jsr:@std/toml@^1.0.11",
     "@std/fs": "jsr:@std/fs@^1.0.21",
-    "@deno/wasmbuild": "jsr:@deno/wasmbuild@0.20.0"
+    "@deno/wasmbuild": "jsr:@deno/wasmbuild@0.21.0"
   }
 }
