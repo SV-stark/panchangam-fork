@@ -16,9 +16,14 @@ async function buildNpm() {
     Deno.exit(1);
   }
 
-  // 2. Ensure wasm-bindgen-cli is available and matches version 0.2.105
-  // Note: Cargo dependencies pin to 0.2.105 via js-sys.
-  const requiredVersion = "0.2.105";
+  // 2. Derive wasm-bindgen version from Cargo.toml
+  const cargoToml = await Deno.readTextFile("Cargo.toml");
+  const matchVersion = cargoToml.match(/wasm-bindgen\s*=\s*"([^"]+)"/);
+  if (!matchVersion) {
+    console.error("Could not find wasm-bindgen version in Cargo.toml");
+    Deno.exit(1);
+  }
+  const requiredVersion = matchVersion[1];
   let installedVersion = "";
 
   const checkCmd = new Deno.Command("wasm-bindgen", { args: ["--version"] });
