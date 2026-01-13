@@ -1,11 +1,12 @@
 
 import { strict as assert } from 'assert';
-import { calculate_daily_panchang, Location, get_swisseph_version } from '../lib/panchangam.js';
+import { calculate_daily_panchang, Location } from '../lib/panchangam.js';
 import * as BrowserLib from '../lib/browser/panchangam.js';
+import process from "node:process";
 
 console.log("Testing Node.js Integration...");
 
-async function testDefault() {
+function testDefault() {
     console.log("Testing Default Import...");
     try {
         const loc = new Location(12.97, 77.59, 920);
@@ -18,7 +19,7 @@ async function testDefault() {
     }
 }
 
-async function testBrowser() {
+function testBrowser() {
     console.log("Testing Browser (Inline) Import...");
     try {
         const loc = new BrowserLib.Location(12.97, 77.59, 920);
@@ -31,6 +32,6 @@ async function testBrowser() {
     }
 }
 
-await testDefault();
-await testBrowser();
+testDefault();
+testBrowser();
 console.log("All Node.js tests passed.");

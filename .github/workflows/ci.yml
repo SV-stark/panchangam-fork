@@ -43,6 +43,11 @@ jobs:
         env:
           CC: clang
 
+      - name: Build Browser WASM
+        run: deno task build:inline
+        env:
+          CC: clang
+
       - name: Run Tests
         run: deno task test
 
@@ -59,6 +64,7 @@ jobs:
       - name: Verify Artifacts
         run: |
           test -f lib/panchangam.js
+          test -f lib/browser/panchangam.js
           test -f npm/package.json
           test -f npm/panchangam.js
 

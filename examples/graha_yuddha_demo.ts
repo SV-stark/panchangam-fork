@@ -20,7 +20,7 @@ if (Array.isArray(wars) && wars.length > 0) {
     console.log(`       ${w.planet1_name} Mag: ${w.planet1_mag.toFixed(2)}`);
     console.log(`       ${w.planet2_name} Mag: ${w.planet2_mag.toFixed(2)}`);
 
-    let winnerName = w.winner_id === w.planet1_id
+    const winnerName = w.winner_id === w.planet1_id
       ? w.planet1_name
       : w.planet2_name;
     console.log(`       🏆 Victor: ${winnerName} (Brighter)`);
@@ -38,7 +38,7 @@ if (!wars2 || wars2.length === 0) {
 } else {
   console.log(
     `⚠️  Unexpected war detected: ${
-      wars2.map((w) => w.planet1_name + "-" + w.planet2_name).join(", ")
-    }`,
+      // deno-lint-ignore no-explicit-any
+      wars2.map((w: any) => w.planet1_name + "-" + w.planet2_name).join(", ")}`,
   );
 }

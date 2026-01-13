@@ -7,7 +7,6 @@ import {
   calculate_rahu_kaal,
   calculate_sunrise,
   calculate_sunset,
-  // Vedic Time
   calculate_tithi,
   calculate_vara,
   calculate_yamaganda,
@@ -15,9 +14,7 @@ import {
   // Astronomy
   get_ayanamsha,
   get_version,
-  // Geo
   Location,
-  Paksha,
 } from "../lib/panchangam.js";
 
 // Helper to format dates

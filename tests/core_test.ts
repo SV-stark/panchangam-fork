@@ -3,7 +3,6 @@ import {
   calculate_sunrise,
   calculate_tithi,
   get_swisseph_version,
-  get_version,
   Location,
 } from "../lib/panchangam.js";
 
