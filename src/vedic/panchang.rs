@@ -1,9 +1,8 @@
 use wasm_bindgen::prelude::*;
 use serde::{Deserialize, Serialize};
 use crate::{Location, calculate_sunrise, calculate_sunset};
-use crate::vedic::{tithi, nakshatra, yoga, vara, muhurat};
-use crate::astronomy::{ayanamsha, solver};
-use crate::astronomy::planets::{self, PlanetId};
+use crate::vedic::{tithi, nakshatra, yoga, vara, muhurat, karana};
+use crate::astronomy::ayanamsha;
 use crate::astronomy::ayanamsha::AyanamshaMode;
 use alloc::string::String;
 
@@ -22,6 +21,8 @@ pub struct DailyPanchang {
     /// Name of the Tithi (e.g., "Shukla-Chaturdashi")
     #[wasm_bindgen(getter_with_clone)]
     pub tithi_name: String,
+    /// Timestamp (Unix ms) when this Tithi started.
+    pub tithi_start_time: Option<f64>,
     /// Timestamp (Unix ms) when this Tithi ends. None if it doesn't end today.
     pub tithi_end_time: Option<f64>,
 
@@ -31,6 +32,8 @@ pub struct DailyPanchang {
     /// Name of the Nakshatra (e.g., "Krittika")
     #[wasm_bindgen(getter_with_clone)]
     pub nakshatra_name: String,
+    /// Timestamp (Unix ms) when this Nakshatra started.
+    pub nakshatra_start_time: Option<f64>,
     /// Timestamp (Unix ms) when this Nakshatra ends.
     pub nakshatra_end_time: Option<f64>,
     
@@ -40,13 +43,37 @@ pub struct DailyPanchang {
     /// Name of the Yoga (e.g., "Vishkumbha")
     #[wasm_bindgen(getter_with_clone)]
     pub yoga_name: String,
+    /// Timestamp (Unix ms) when this Yoga started.
+    pub yoga_start_time: Option<f64>,
     /// Timestamp (Unix ms) when this Yoga ends.
     pub yoga_end_time: Option<f64>,
+
+    // Karana
+    /// Karana index (1-60).
+    pub karana_index: u8,
+    /// Name of the Karana (e.g., "Bava")
+    #[wasm_bindgen(getter_with_clone)]
+    pub karana_name: String,
+    /// Timestamp (Unix ms) when this Karana started.
+    pub karana_start_time: Option<f64>,
+    /// Timestamp (Unix ms) when this Karana ends.
+    pub karana_end_time: Option<f64>,
 
     // Vara
     /// Solar Weekday name (e.g., "Adityawara")
     #[wasm_bindgen(getter_with_clone)]
     pub vara_name: String,
+    
+    // Houses
+    /// Sidereal Ascendant (Lagna) at sunrise (degrees)
+    pub ascendant: f64,
+    /// Sidereal Midheaven (MC) at sunrise (degrees)
+    pub mc: f64,
+    
+    // Planets
+    /// Array of planetary positions at sunrise
+    #[wasm_bindgen(skip)]
+    pub planets: alloc::vec::Vec<crate::astronomy::planets::PlanetData>,
     
     // Config
     /// The Ayanamsha value (in degrees) used for calculations
@@ -56,6 +83,14 @@ pub struct DailyPanchang {
     /// Auspicious and Inauspicious time periods for the day
     #[wasm_bindgen(getter_with_clone)]
     pub muhurats: muhurat::DayMuhurats,
+}
+
+#[wasm_bindgen]
+impl DailyPanchang {
+    #[wasm_bindgen(getter)]
+    pub fn planets(&self) -> JsValue {
+        serde_wasm_bindgen::to_value(&self.planets).unwrap_or(JsValue::NULL)
+    }
 }
 
 /// Calculate the complete Panchangam for a given date and location.
@@ -93,6 +128,7 @@ pub fn calculate_daily_panchang(
         3 => AyanamshaMode::Raman,
         5 => AyanamshaMode::Krishnamurti,
         27 => AyanamshaMode::TrueCitra,
+        0 => AyanamshaMode::FaganBradley,
         _ => AyanamshaMode::Lahiri,
     };
 
@@ -109,68 +145,41 @@ pub fn calculate_daily_panchang(
     let t_info = tithi::calculate_tithi(sunrise_jd);
     let tithi_idx = t_info.index;
     
-    // Calculate Tithi end time using binary search
-    // Target is simply next integer index * 12 degrees
-    let tithi_idx_val = tithi_idx as f64;
-    let target_angle = tithi_idx_val * 12.0;
+    // Tithi Times
+    let tithi_start_jd = tithi::tithi_start_time(sunrise_jd);
+    let t_start_ms = Some((tithi_start_jd - 2440587.5) * 86_400_000.0);
     
-    let search_end_jd = sunrise_jd + 1.25; 
-    
-    let t_end_jd = solver::find_crossing_time(
-        |jd| {
-            use crate::astronomy::planets;
-            let sun = planets::get_planet_position_sidereal(PlanetId::Sun, jd, ayanamsha::get_ayanamsha(mode, jd));
-            let moon = planets::get_planet_position_sidereal(PlanetId::Moon, jd, ayanamsha::get_ayanamsha(mode, jd));
-            let mut diff = moon.longitude - sun.longitude;
-            if diff < 0.0 { diff += 360.0; }
-            diff
-        },
-        sunrise_jd,
-        search_end_jd,
-        target_angle,
-        360.0
-    );
-    let tithi_end_ms = t_end_jd.map(|jd| (jd - 2440587.5) * 86_400_000.0);
+    let tithi_end_jd = tithi::tithi_end_time(sunrise_jd);
+    let t_end_ms = Some((tithi_end_jd - 2440587.5) * 86_400_000.0);
 
-    // Nakshatra at Sunrise
+    // Nakshatra Times
     let n_info = nakshatra::calculate_nakshatra(sunrise_jd, mode);
     let n_idx = n_info.index;
-    let nak_len = 360.0 / 27.0;
-    let target_nak_angle = (n_idx as f64) * nak_len;
     
-    let n_end_jd = solver::find_crossing_time(
-        |jd| {
-            let moon = planets::get_planet_position_sidereal(PlanetId::Moon, jd, ayanamsha::get_ayanamsha(mode, jd));
-            moon.longitude
-        },
-        sunrise_jd,
-        search_end_jd,
-        target_nak_angle,
-        360.0
-    );
-    let nak_end_ms = n_end_jd.map(|jd| (jd - 2440587.5) * 86_400_000.0);
+    let nak_start_jd = nakshatra::nakshatra_start_time(sunrise_jd, mode);
+    let n_start_ms = Some((nak_start_jd - 2440587.5) * 86_400_000.0);
+    
+    let nak_end_jd = nakshatra::nakshatra_end_time(sunrise_jd, mode);
+    let n_end_ms = Some((nak_end_jd - 2440587.5) * 86_400_000.0);
 
-    // Yoga at Sunrise
+    // Yoga Times
     let y_info = yoga::calculate_yoga(sunrise_jd, mode);
     let y_idx = y_info.index;
-    let yoga_len = 360.0 / 27.0;
-    let target_yoga_angle = (y_idx as f64) * yoga_len;
     
-    let y_end_jd = solver::find_crossing_time(
-        |jd| {
-            use crate::astronomy::planets;
-            let sun = planets::get_planet_position_sidereal(PlanetId::Sun, jd, ayanamsha::get_ayanamsha(mode, jd));
-            let moon = planets::get_planet_position_sidereal(PlanetId::Moon, jd, ayanamsha::get_ayanamsha(mode, jd));
-            let sum = moon.longitude + sun.longitude;
-            sum % 360.0
-        },
-        sunrise_jd,
-        search_end_jd,
-        target_yoga_angle, 
-        360.0
-    );
+    let yoga_start_jd = yoga::yoga_start_time(sunrise_jd, mode);
+    let y_start_ms = Some((yoga_start_jd - 2440587.5) * 86_400_000.0);
+    
+    let yoga_end_jd = yoga::yoga_end_time(sunrise_jd, mode);
+    let y_end_ms = Some((yoga_end_jd - 2440587.5) * 86_400_000.0);
 
-    let yoga_end_ms = y_end_jd.map(|jd| (jd - 2440587.5) * 86_400_000.0);
+    // Karana Times
+    let k_info = karana::calculate_karana(sunrise_jd);
+    
+    let karana_start_jd = karana::karana_start_time(sunrise_jd);
+    let k_start_ms = Some((karana_start_jd - 2440587.5) * 86_400_000.0);
+    
+    let karana_end_jd = karana::karana_end_time(sunrise_jd);
+    let k_end_ms = Some((karana_end_jd - 2440587.5) * 86_400_000.0);
 
     // Vara (Weekday)
     let v_info = vara::calculate_vara(sunrise_jd);
@@ -180,23 +189,48 @@ pub fn calculate_daily_panchang(
     let sunset_ms = calculate_sunset(year, month, day, location);
     let muhurats = muhurat::calculate_muhurats(sunrise_ms, sunset_ms, weekday_idx);
 
+    // Houses at Sunrise
+    let h_info = crate::astronomy::houses::calculate_houses(
+        sunrise_jd,
+        location.latitude,
+        location.longitude,
+        'P',
+        Some(mode)
+    )?;
+
+    // Planets at Sunrise (Vec<PlanetData>)
+    let p_list = crate::astronomy::planets::get_planet_positions_bulk(sunrise_jd, ayan_val);
+
     Ok(DailyPanchang {
         sunrise: sunrise_ms,
         sunset: sunset_ms,
         
         tithi_index: tithi_idx as u8,
         tithi_name: t_info.name,
-        tithi_end_time: tithi_end_ms,
+        tithi_start_time: t_start_ms,
+        tithi_end_time: t_end_ms,
         
         nakshatra_index: n_idx as u8,
         nakshatra_name: n_info.name,
-        nakshatra_end_time: nak_end_ms,
+        nakshatra_start_time: n_start_ms,
+        nakshatra_end_time: n_end_ms,
         
         yoga_index: y_idx as u8,
         yoga_name: y_info.name,
-        yoga_end_time: yoga_end_ms,
+        yoga_start_time: y_start_ms,
+        yoga_end_time: y_end_ms,
+        
+        karana_index: k_info.index,
+        karana_name: k_info.name,
+        karana_start_time: k_start_ms,
+        karana_end_time: k_end_ms,
         
         vara_name: v_info.name,
+        
+        ascendant: h_info.ascendant,
+        mc: h_info.mc,
+        
+        planets: p_list,
         
         ayanamsha_value: ayan_val,
         muhurats: muhurats,
