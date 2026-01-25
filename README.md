@@ -2,7 +2,6 @@
 
 [![JSR](https://jsr.io/badges/@fusionstrings/panchangam)](https://jsr.io/@fusionstrings/panchangam)
 [![NPM](https://img.shields.io/npm/v/@fusionstrings/panchangam)](https://www.npmjs.com/package/@fusionstrings/panchangam)
-[![Crates.io](https://img.shields.io/crates/v/panchangam)](https://crates.io/crates/panchangam)
 
 > **High-Precision Vedic Astrology & Calendar Library**
 >
@@ -51,32 +50,27 @@ ancient Vedic requirements and modern astronomical precision.
 
 ### Installation
 
-This project is currently distributed as a source crate. Verify and build the
-Wasm bindings locally.
+Panchangam is available on [JSR](https://jsr.io/@fusionstrings/panchangam) and
+[NPM](https://www.npmjs.com/package/@fusionstrings/panchangam).
 
-**Prerequisites:**
-
-- [Rust](https://www.rust-lang.org/) (stable)
-- [Deno](https://deno.land/) (v1.37+)
-
-**One-Step Build:**
+**Deno:**
 
 ```bash
-deno task build
+deno add jsr:@fusionstrings/panchangam
 ```
 
-This generates:
+**Node.js / Bun:**
 
-- `./lib/panchangam.js`: The ESM entry point.
-- `./lib/panchangam.wasm`: The compiled Wasm binary.
-- `./lib/panchangam.d.ts`: Fully typed TypeScript definitions.
+```bash
+npm install @fusionstrings/panchangam
+```
 
 ### Quick Start: Daily Panchang
 
 Calculate comprehensive Panchang data including precise end times.
 
 ```typescript
-import { calculate_daily_panchang, Location } from "./lib/panchangam.js";
+import { calculate_daily_panchang, Location } from "@fusionstrings/panchangam";
 
 // 1. Define Location: New Delhi (28.61 N, 77.20 E, 225m)
 const delhi = new Location(28.6139, 77.2090, 225.0);
@@ -89,10 +83,20 @@ const result = calculate_daily_panchang(2024, 1, 1, delhi, 1);
 // 3. Output Results
 console.log(`Sunrise: ${new Date(result.sunrise).toLocaleTimeString()}`);
 console.log(`Tithi: ${result.tithi_name}`);
-console.log(`  - Ends at: ${new Date(result.tithi_end_time).toLocaleString()}`);
+console.log(
+  `  - Ends at: ${
+    result.tithi_end_time
+      ? new Date(result.tithi_end_time).toLocaleString()
+      : "N/A"
+  }`,
+);
 console.log(`Nakshatra: ${result.nakshatra_name}`);
 console.log(
-  `  - Ends at: ${new Date(result.nakshatra_end_time).toLocaleString()}`,
+  `  - Ends at: ${
+    result.nakshatra_end_time
+      ? new Date(result.nakshatra_end_time).toLocaleString()
+      : "N/A"
+  }`,
 );
 ```
 
@@ -101,10 +105,10 @@ console.log(
 Get precise sidereal positions and dignity status for all planets.
 
 ```typescript
-import { calculate_planets, swe_julday } from "./lib/panchangam.js";
+import { calculate_planets, p_julday } from "@fusionstrings/panchangam";
 
 // Julian Day for calculation
-const jd = swe_julday(2024, 1, 1, 12.0, 1); // Noon UT
+const jd = p_julday(2024, 1, 1, 12.0, 1); // Noon UT
 
 // Calculate Sidereal positions (Mode 1 = Lahiri)
 const planets = calculate_planets(jd, 1);
@@ -155,10 +159,10 @@ console.log(
 Detect planetary wars where planets are within 1° of each other.
 
 ```typescript
-import { check_graha_yuddha, swe_julday } from "./lib/panchangam.js";
+import { check_graha_yuddha, p_julday } from "@fusionstrings/panchangam";
 
-const jd = swe_julday(2024, 1, 1, 12.0, 1);
-const wars = check_graha_yuddha(jd, 1); // Mode 1 = Lahiri
+const jd = p_julday(2024, 1, 1, 12.0, 1);
+const wars = check_graha_yuddha(jd, 1) as any[]; // Mode 1 = Lahiri
 
 if (wars.length > 0) {
   console.log("Planetary War Detected!");
@@ -182,7 +186,7 @@ if (wars.length > 0) {
 Calculate the current ruling planetary periods.
 
 ```typescript
-import { calculate_vimshottari } from "./lib/panchangam.js";
+import { calculate_vimshottari } from "@fusionstrings/panchangam";
 
 // Birth details
 const birth_moon_long = 45.5; // Example longitude
@@ -209,9 +213,13 @@ Calculate Ascendant and House Cusps for various systems (Placidus, Whole Sign,
 etc.).
 
 ```typescript
-import { calculate_houses, Location } from "./lib/panchangam.js";
+import {
+  calculate_houses,
+  Location,
+  p_julday,
+} from "@fusionstrings/panchangam";
 
-const jd = swe_julday(2024, 1, 1, 12.0, 1);
+const jd = p_julday(2024, 1, 1, 12.0, 1);
 const loc = new Location(28.6139, 77.2090, 0.0);
 
 // 'P' = Placidus, 'W' = Whole Sign, 'E' = Equal
@@ -233,11 +241,35 @@ houses.cusps.forEach((cusp, i) => {
 - **`src/astronomy/`**: Swiss Ephemeris wrappers and solvers.
 - **`scripts/build_npm.ts`**: Build script.
 
+### Development / Building from Source
+
+If you want to contribute or build the latest version from source:
+
+**Prerequisites:**
+
+- [Rust](https://www.rust-lang.org/) (stable)
+- [Deno](https://deno.land/) (v1.37+)
+
+**One-Step Build:**
+
+```bash
+deno task build
+```
+
+This generates:
+
+- `./lib/panchangam.js`: The ESM entry point.
+- `./lib/panchangam.wasm`: The compiled Wasm binary.
+- `./lib/panchangam.d.ts`: Fully typed TypeScript definitions.
+
 ### Runnable Examples
 
 You can run the full examples provided in the `examples/` directory:
 
 ```bash
+# Basic Features (Daily Panchang, Planets, etc.)
+deno run -A examples/demo.ts
+
 # Advanced Features (Vargas, Shadbala, Jaimini)
 deno run -A examples/demo_advanced.ts
 
@@ -250,7 +282,7 @@ deno run -A examples/demo_ashtakavarga.ts
 Run the verification suite:
 
 ```bash
-deno test --allow-read --allow-env
+deno task test
 ```
 
 ## License
