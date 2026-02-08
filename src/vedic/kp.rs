@@ -8,7 +8,9 @@
 //!
 //! Based on standard KP tables and Vimshottari Dasha proportions.
 
-use crate::vedic::nakshatra::NAKSHATRA_LORDS;
+use alloc::collections::BTreeMap;
+use alloc::vec;
+use alloc::vec::Vec;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -127,5 +129,113 @@ pub fn calculate_kp_lords(long: f64) -> KPLordInfo {
         star_lord,
         sub_lord,
         sub_sub_lord,
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[wasm_bindgen(getter_with_clone)]
+pub struct KPLevelInfo {
+    pub level_a: Vec<i32>, // Planet in star of occupant
+    pub level_b: Vec<i32>, // Occupant
+    pub level_c: Vec<i32>, // Planet in star of owner
+    pub level_d: Vec<i32>, // Owner
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[wasm_bindgen(getter_with_clone)]
+pub struct KPSignificators {
+    #[wasm_bindgen(skip)]
+    pub house_significators: Vec<KPLevelInfo>, // 0-11 corresponds to House 1-12
+}
+
+/// Calculate KP Significators for all houses
+///
+/// # Arguments
+/// * `planet_longs` - Map of planets and their longitudes (0=Sun..8=Ketu)
+/// * `cusps` - 12 house cusps (KP cusps)
+#[wasm_bindgen]
+pub fn calculate_kp_significators(planet_longs: &JsValue, cusps: Vec<f64>) -> KPSignificators {
+    let longs: BTreeMap<i32, f64> =
+        serde_wasm_bindgen::from_value(planet_longs.clone()).unwrap_or_default();
+
+    // 1. Calculate KP Lords for all planets
+    let mut planet_lords = BTreeMap::new();
+    for (&id, &long) in longs.iter() {
+        planet_lords.insert(id, calculate_kp_lords(long));
+    }
+
+    // 2. Determine House Ownership and Occupation
+    // Note: KP uses Placidus or Cuspal intercept method.
+    // Sign Lord of the Cusp is the Owner.
+    let mut house_owners = [0i32; 12];
+    for h in 0..12 {
+        let cusp_long = cusps[h];
+        let info = calculate_kp_lords(cusp_long);
+        house_owners[h] = info.sign_lord;
+    }
+
+    // Identify which house each planet occupies
+    let mut house_occupants: Vec<Vec<i32>> = vec![vec![]; 12];
+    for (&id, &long) in longs.iter() {
+        // Find which house. Cusp i to Cusp i+1.
+        for h in 0..12 {
+            let start = cusps[h];
+            let end = cusps[(h + 1) % 12];
+
+            let is_in = if start < end {
+                long >= start && long < end
+            } else {
+                // Wrap around Pis -> Ari
+                long >= start || long < end
+            };
+
+            if is_in {
+                house_occupants[h].push(id);
+                break;
+            }
+        }
+    }
+
+    // 3. Populate Levels A, B, C, D
+    let mut house_results = vec![];
+    for h in 0..12 {
+        let owner = house_owners[h];
+        let occupants = &house_occupants[h];
+
+        // Level B: Occupants
+        let level_b = occupants.clone();
+
+        // Level D: Owner
+        let level_d = vec![owner];
+
+        // Level A: Planet in star of occupant
+        let mut level_a = vec![];
+        for &occ_id in occupants.iter() {
+            // Find planets whose star lord is occ_id
+            for (&p_id, p_info) in planet_lords.iter() {
+                if p_info.star_lord == occ_id {
+                    level_a.push(p_id);
+                }
+            }
+        }
+
+        // Level C: Planet in star of owner
+        let mut level_c = vec![];
+        for (&p_id, p_info) in planet_lords.iter() {
+            if p_info.star_lord == owner {
+                level_c.push(p_id);
+            }
+        }
+
+        house_results.push(KPLevelInfo {
+            level_a,
+            level_b,
+            level_c,
+            level_d,
+        });
+    }
+
+    KPSignificators {
+        house_significators: house_results,
     }
 }

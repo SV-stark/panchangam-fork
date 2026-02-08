@@ -1,6 +1,9 @@
 //! Vimshottari Dasha calculations
 
+use alloc::collections::BTreeMap;
 use alloc::string::{String, ToString};
+use alloc::vec;
+use alloc::vec::Vec;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -311,5 +314,102 @@ pub fn calculate_yogini(moon_long: f64, birth_time_ms: f64, current_time_ms: f64
         mahadasha_end_date: md_end_ms,
         antardasha_end_date: ad_end_ms,
         pratyantardasha_end_date: pd_end_ms,
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[wasm_bindgen(getter_with_clone)]
+pub struct NarayanaPeriod {
+    pub sign: u8,
+    pub sign_name: String,
+    pub start_date: f64,
+    pub end_date: f64,
+    pub duration_years: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[wasm_bindgen(getter_with_clone)]
+pub struct NarayanaResult {
+    pub start_sign: u8,
+    pub periods: Vec<NarayanaPeriod>,
+}
+
+/// Calculate Narayana Dasha (Sign Dasha)
+///
+/// Note: This is a simplified implementation for AstroNaksh migration.
+#[wasm_bindgen]
+pub fn calculate_narayana(
+    lagna_sign: u8,
+    planet_longs: &JsValue, // id -> long
+    birth_time_ms: f64,
+) -> NarayanaResult {
+    let longs: BTreeMap<i32, f64> =
+        serde_wasm_bindgen::from_value(planet_longs.clone()).unwrap_or_default();
+
+    // 1. Starting Sign: Lagna
+    let start_sign = lagna_sign;
+
+    // 2. Logic to calculate periods
+    // We'll calculate 12 signs in sequence
+    let mut periods = vec![];
+    let mut current_time = birth_time_ms;
+    let ms_per_year = 365.25 * 24.0 * 3600.0 * 1000.0;
+
+    let sign_names = [
+        "Aries",
+        "Taurus",
+        "Gemini",
+        "Cancer",
+        "Leo",
+        "Virgo",
+        "Libra",
+        "Scorpio",
+        "Sagittarius",
+        "Capricorn",
+        "Aquarius",
+        "Pisces",
+    ];
+
+    for i in 0..12 {
+        let sign = ((start_sign as i32 - 1 + i) % 12 + 1) as u8;
+
+        // Calculate length: Distance to Lord
+        // Standard Lords: 1=Mars, 2=Ven, 3=Mer, 4=Moon, 5=Sun, 6=Mer, 7=Ven, 8=Mars, 9=Jup, 10=Sat, 11=Sat, 12=Jup
+        let lord_id = match sign {
+            1 | 8 => 2,   // Mars
+            2 | 7 => 5,   // Venus
+            3 | 6 => 3,   // Mercury
+            4 => 1,       // Moon
+            5 => 0,       // Sun
+            9 | 12 => 4,  // Jupiter
+            10 | 11 => 6, // Saturn
+            _ => 1,
+        };
+
+        let lord_long = longs.get(&lord_id).cloned().unwrap_or(0.0);
+        let lord_sign = (lord_long / 30.0).floor() as i32 + 1;
+
+        // Distance from Sign to Lord
+        let mut years = (lord_sign - sign as i32 + 12) % 12;
+        if years == 0 {
+            years = 12;
+        }
+
+        let duration_ms = years as f64 * ms_per_year;
+
+        periods.push(NarayanaPeriod {
+            sign,
+            sign_name: sign_names[sign as usize - 1].to_string(),
+            start_date: current_time,
+            end_date: current_time + duration_ms,
+            duration_years: years as f64,
+        });
+
+        current_time += duration_ms;
+    }
+
+    NarayanaResult {
+        start_sign,
+        periods,
     }
 }

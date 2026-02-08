@@ -33,11 +33,14 @@ pub use vedic::vargas::{
 pub use vedic::ashtakavarga::{
     AshtakavargaResult, PrastaraResult, ReducedAshtakavarga, Sarvashtakavarga,
 };
+pub use vedic::dasha::{NarayanaPeriod, NarayanaResult};
 pub use vedic::jaimini::{CharaDashaPeriod, JaiminiProfile, KarakaName, KarakaObject};
-pub use vedic::kp::KPLordInfo;
+pub use vedic::kp::{KPLevelInfo, KPLordInfo, KPSignificators};
+pub use vedic::maitri::{MaitriResult, Relationship};
 pub use vedic::shadbala::{ShadbalaProfile, ShadbalaResult};
 pub use vedic::special_lagnas::SpecialLagnas;
-pub use vedic::transits::{DhaiyaStatus, SadeSatiStatus};
+pub use vedic::sudarshan::{SudarshanChakra, SudarshanHouseResult};
+pub use vedic::transits::{DhaiyaStatus, SadeSatiStatus, VedhaResult};
 
 // --- Modules ---
 pub mod astronomy;
@@ -176,6 +179,16 @@ pub fn calculate_yogini(
     current_time_ms: f64,
 ) -> vedic::dasha::YoginiInfo {
     vedic::dasha::calculate_yogini(moon_long, birth_time_ms, current_time_ms)
+}
+
+/// Calculate Narayana Dasha details
+#[wasm_bindgen]
+pub fn calculate_narayana(
+    lagna_sign: u8,
+    planet_longs: &JsValue,
+    birth_time_ms: f64,
+) -> vedic::dasha::NarayanaResult {
+    vedic::dasha::calculate_narayana(lagna_sign, planet_longs, birth_time_ms)
 }
 
 /// Calculate specific Varga position
@@ -422,6 +435,12 @@ pub fn calculate_kp(long: f64) -> KPLordInfo {
     vedic::kp::calculate_kp_lords(long)
 }
 
+/// Calculate KP Significators
+#[wasm_bindgen]
+pub fn calculate_kp_significators(planet_longs: &JsValue, cusps: Vec<f64>) -> KPSignificators {
+    vedic::kp::calculate_kp_significators(planet_longs, cusps)
+}
+
 /// Special Transit Analysis (Sade Sati)
 #[wasm_bindgen]
 pub fn analyze_sade_sati(moon_sign: u8, saturn_sign: u8) -> SadeSatiStatus {
@@ -432,6 +451,36 @@ pub fn analyze_sade_sati(moon_sign: u8, saturn_sign: u8) -> SadeSatiStatus {
 #[wasm_bindgen]
 pub fn analyze_dhaiya(moon_sign: u8, saturn_sign: u8) -> DhaiyaStatus {
     vedic::transits::check_dhaiya(moon_sign, saturn_sign)
+}
+
+/// Calculate Gochara Vedha
+#[wasm_bindgen]
+pub fn analyze_vedha(
+    planet_id: i32,
+    house_from_moon: i32,
+    other_transits: &JsValue,
+) -> VedhaResult {
+    vedic::transits::calculate_vedha(planet_id, house_from_moon, other_transits)
+}
+
+/// Calculate Sudarshan Chakra
+#[wasm_bindgen]
+pub fn calculate_sudarshan_chakra(lagna_sign: u8, moon_sign: u8, sun_sign: u8) -> SudarshanChakra {
+    vedic::sudarshan::calculate_sudarshan_chakra(lagna_sign, moon_sign, sun_sign)
+}
+
+/// Calculate Panchadha Maitri
+#[wasm_bindgen]
+pub fn calculate_panchadha_maitri(p1: i32, p2: i32, p1_long: f64, p2_long: f64) -> MaitriResult {
+    let natural = vedic::maitri::get_natural_relationship(p1, p2);
+    let temporal = vedic::maitri::get_temporal_relationship(p1_long, p2_long);
+    let compound = vedic::maitri::get_compound_relationship(natural, temporal);
+
+    MaitriResult {
+        natural: natural as i32,
+        temporal: temporal as i32,
+        compound: compound as i32,
+    }
 }
 
 // Re-export Yoga types
