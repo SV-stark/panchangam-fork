@@ -65,3 +65,26 @@ Deno.test("Varga: D60 (Shashtiamsha)", () => {
   // (0 idx + 20) % 12 = 8 -> Sign index 8 is Sagittarius(9).
   assertEquals(res.sign, 9);
 });
+
+Deno.test("Varga: D249 (Micro Analysis)", () => {
+  // 1 degree Aries.
+  // Aries is Odd(1). Starts from Aries(1).
+  // 30 degrees / 249 parts = ~0.12048 degrees per part.
+  // 1.0 / 0.12048 = 8.3 -> 8th part index (9th part).
+  // Sign = 1 + 8 = 9 (Sagittarius).
+  
+  const res = calculate_varga(1.0, 249, undefined);
+  console.log("1 deg Aries D249:", res.sign);
+  // Aries(1) + 8 = Sagittarius(9)
+  assertEquals(res.sign, 9);
+  
+  // 1 degree Taurus (Even).
+  // Even starts from 9th from Sign.
+  // Taurus(2) -> 9th is Capricorn(10).
+  // Part index is still 8.
+  // Sign = 10 + 8 = 18. 18 % 12 = 6 (Virgo).
+  
+  const res2 = calculate_varga(31.0, 249, undefined); // 30+1
+  console.log("1 deg Taurus D249:", res2.sign);
+  assertEquals(res2.sign, 6);
+});

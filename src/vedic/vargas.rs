@@ -42,6 +42,7 @@ pub enum VargaType {
     D40 = 40,
     D45 = 45,
     D60 = 60,
+    D249 = 249,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -187,6 +188,7 @@ pub fn calculate_varga_position(
         VargaType::D40 => calculate_d40(long_deg),
         VargaType::D45 => calculate_d45(long_deg),
         VargaType::D60 => calculate_d60(long_deg),
+        VargaType::D249 => calculate_d249(long_deg),
     }
 }
 
@@ -589,6 +591,7 @@ fn calculate_d45(long: f64) -> VargaPosition {
     create_pos(target_0 + 1, projected_deg)
 }
 
+
 // D-60 (Shashtiamsha)
 fn calculate_d60(long: f64) -> VargaPosition {
     let sign_0 = (long / 30.0).floor() as u8;
@@ -601,4 +604,32 @@ fn calculate_d60(long: f64) -> VargaPosition {
     // Parashara: "Count from the sign itself."
     let target_0 = (sign_0 + part) % 12;
     create_pos(target_0 + 1, projected_deg)
+}
+
+// D-249 (High-precision Micro Analysis)
+// Odd Signs: Count from Sign.
+// Even Signs: Count from 9th from Sign.
+fn calculate_d249(long: f64) -> VargaPosition {
+    let sign_0 = (long / 30.0).floor() as u8;
+    let deg = long % 30.0;
+    let part_size = 30.0 / 249.0;
+    let part = (deg / part_size).floor() as u64; // 0..248
+    let projected_deg = (deg % part_size) * 249.0;
+    
+    // Start logic
+    let start_offset = if sign_0 % 2 == 0 { 0 } else { 8 }; // 0 for Odd(1,3..), 8 for Even(2,4..) ??
+    // Wait, Odd signs (0, 2, 4 indices) -> Start from Sign (Offset 0)
+    // Even signs (1, 3, 5 indices) -> Start from 9th (Offset 8)
+    
+    // Check:
+    // Aries (0) -> Odd. Offset 0. Correct.
+    // Taurus (1) -> Even. Offset 8 (Capricorn). Correct.
+    
+    let is_odd_sign = sign_0 % 2 == 0; // Index 0 is Aries (Odd)
+    let start_offset = if is_odd_sign { 0 } else { 8 };
+    
+    let start_sign_0 = (sign_0 + start_offset) % 12;
+    let target_0 = (start_sign_0 as u64 + part) % 12;
+    
+    create_pos(target_0 as u8 + 1, projected_deg)
 }

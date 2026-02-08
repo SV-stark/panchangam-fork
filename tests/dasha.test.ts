@@ -29,6 +29,11 @@ Deno.test("Dasha: Yogini Dasha Calculation", () => {
   console.log("Yogini after 5 years:", next_yogini);
 
   assertEquals(next_yogini.mahadasha, "Bhadrika");
+
+  // Check Pratyantardasha integration
+  // At 0 time (start of Bhramari MD), Antardasha is Bhramari.
+  // Pratyantardasha should also be Bhramari.
+  assertEquals(start_yogini.pratyantardasha, "Bhramari");
 });
 
 Deno.test("Dasha: Vimshottari Basic verify", () => {
