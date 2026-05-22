@@ -29,14 +29,22 @@ pub(crate) use swiss_eph as swe_bindings;
 pub use vedic::vargas::{
     D10Variation, D2Variation, D3Variation, D9Variation, VargaConfig, VargaPosition, VargaType,
 };
+pub use vedic::calendar::{MasaResult, SamvatsaraResult, RituResult};
 // Re-export Shadbala/Jaimini types
 pub use vedic::ashtakavarga::{
     AshtakavargaResult, PrastaraResult, ReducedAshtakavarga, Sarvashtakavarga,
 };
-pub use vedic::dasha::{NarayanaPeriod, NarayanaResult};
+pub use vedic::dasha::{NarayanaPeriod, NarayanaResult, DashaInfo5Levels};
+pub use vedic::dasha_advanced::{AshtottariResult, KalachakraPeriod, KalachakraResult};
+pub use vedic::bhava_bala::{BhavaStrength, BhavaBalaResult};
+pub use vedic::vimsopaka::{VimsopakaPlanetResult, VimsopakaResult};
+pub use vedic::compatibility::{AshtakootaResult, ManglikResult, CompatibilityReport};
+pub use vedic::interpretations::{NadiInterpretation, ProgenyReport, CareerReport};
+pub use vedic::event_timing::{TimingWindow, EventTimingReport};
 pub use vedic::jaimini::{CharaDashaPeriod, JaiminiProfile, KarakaName, KarakaObject};
 pub use vedic::kp::{KPLevelInfo, KPLordInfo, KPSignificators};
 pub use vedic::maitri::{MaitriResult, Relationship};
+pub use vedic::muhurat::{ChoghadiyaPeriod, DayMuhurats, HoraPeriod, Muhurat};
 pub use vedic::shadbala::{ShadbalaProfile, ShadbalaResult};
 pub use vedic::special_lagnas::SpecialLagnas;
 pub use vedic::sudarshan::{SudarshanChakra, SudarshanHouseResult};
@@ -156,6 +164,37 @@ pub fn calculate_planets(jd: f64, ayan_mode: i32) -> Result<JsValue, JsValue> {
     Ok(serde_wasm_bindgen::to_value(&planets)?)
 }
 
+/// Calculate Sidereal Planet Positions with extended options (topocentric, true node, outer planets, asteroids)
+#[wasm_bindgen]
+pub fn calculate_planets_extended(
+    jd: f64,
+    ayan_mode: i32,
+    is_topo: bool,
+    topo_lat: f64,
+    topo_lon: f64,
+    topo_alt: f64,
+    use_true_node: bool,
+    include_outer: bool,
+    include_asteroids: bool,
+) -> Result<JsValue, JsValue> {
+    let mode = astronomy::ayanamsha::AyanamshaMode::from_i32(ayan_mode);
+    let ayan_val = astronomy::ayanamsha::get_ayanamsha(mode, jd);
+
+    let planets = astronomy::planets::get_planet_positions_bulk_extended(
+        jd,
+        ayan_val,
+        is_topo,
+        topo_lat,
+        topo_lon,
+        topo_alt,
+        use_true_node,
+        include_outer,
+        include_asteroids,
+    );
+
+    Ok(serde_wasm_bindgen::to_value(&planets)?)
+}
+
 /// Calculate Vimshottari Dasha details
 ///
 /// # Arguments
@@ -217,6 +256,8 @@ pub fn calculate_varga(
         40 => VargaType::D40,
         45 => VargaType::D45,
         60 => VargaType::D60,
+        150 => VargaType::D150,
+        249 => VargaType::D249,
         _ => return Err(JsValue::from_str("Invalid Varga ID")),
     };
 
@@ -343,6 +384,30 @@ pub fn calculate_ashtakavarga(
     ))
 }
 
+/// Calculate Binna Ashtakavarga for a single planet
+#[wasm_bindgen]
+pub fn calculate_binna_ashtakavarga(
+    target_planet_id: i32,
+    planet_longs: &JsValue,
+    ascendant: f64,
+) -> Result<AshtakavargaResult, JsValue> {
+    let data: Vec<vedic::shadbala::PlanetInput> =
+        serde_wasm_bindgen::from_value(planet_longs.clone())?;
+
+    let mut longs = vec![0.0; 7];
+    for p in data {
+        if p.id >= 0 && p.id <= 6 {
+            longs[p.id as usize] = p.longitude;
+        }
+    }
+
+    Ok(vedic::ashtakavarga::calculate_binna_av(
+        target_planet_id,
+        &longs,
+        ascendant,
+    ))
+}
+
 /// Calculate Ashtakavarga Reductions (Trikona & Ekadhipatya)
 #[wasm_bindgen]
 pub fn calculate_reduced_ashtakavarga(
@@ -389,6 +454,28 @@ pub fn calculate_shodhya_pinda(
         &longs,
         target_planet_id,
     ))
+}
+
+// --- Calendar ---
+
+#[wasm_bindgen]
+pub fn calculate_masa(tithi_idx: u8, sun_long: f64, is_purnimanta: bool) -> MasaResult {
+    vedic::calendar::calculate_masa(tithi_idx, sun_long, 0.0, is_purnimanta)
+}
+
+#[wasm_bindgen]
+pub fn calculate_masa_precise(jd: f64, is_purnimanta: bool) -> MasaResult {
+    vedic::calendar::calculate_masa_precise(jd, is_purnimanta)
+}
+
+#[wasm_bindgen]
+pub fn calculate_samvatsara(kali_year: i32) -> SamvatsaraResult {
+    vedic::calendar::calculate_samvatsara(0.0, kali_year)
+}
+
+#[wasm_bindgen]
+pub fn calculate_ritu(masa_index: u8) -> RituResult {
+    vedic::calendar::calculate_ritu(masa_index)
 }
 
 /// Calculate Prastara Ashtakavarga (Detailed Grid)
@@ -550,4 +637,187 @@ pub fn p_calc_ut(tjd_ut: f64, ipl: i32, iflag: i32) -> Result<JsValue, JsValue> 
     };
 
     Ok(serde_wasm_bindgen::to_value(&result)?)
+}
+
+/// Calculate 5-level Vimshottari Dasha details
+#[wasm_bindgen]
+pub fn calculate_vimshottari_5_levels(
+    moon_long: f64,
+    birth_time_ms: f64,
+    current_time_ms: f64,
+) -> vedic::dasha::DashaInfo5Levels {
+    vedic::dasha::calculate_vimshottari_5_levels(moon_long, birth_time_ms, current_time_ms)
+}
+
+/// Calculate Ashtottari Dasha details
+#[wasm_bindgen]
+pub fn calculate_ashtottari(
+    moon_long: f64,
+    birth_time_ms: f64,
+    current_time_ms: f64,
+) -> Result<Box<[AshtottariResult]>, JsValue> {
+    vedic::dasha_advanced::calculate_ashtottari(moon_long, birth_time_ms, current_time_ms)
+}
+
+/// Calculate Kalachakra Dasha details
+#[wasm_bindgen]
+pub fn calculate_kalachakra(
+    moon_long: f64,
+    birth_time_ms: f64,
+) -> vedic::dasha_advanced::KalachakraResult {
+    vedic::dasha_advanced::calculate_kalachakra(moon_long, birth_time_ms)
+}
+
+/// Calculate Yoga Pinda
+#[wasm_bindgen]
+pub fn calculate_yoga_pinda(
+    reduced_bindus: &JsValue,
+    planet_longs: &JsValue,
+    target_planet_id: i32,
+) -> Result<i32, JsValue> {
+    let bindus_vec: Vec<i32> = serde_wasm_bindgen::from_value(reduced_bindus.clone())?;
+    let data: Vec<vedic::shadbala::PlanetInput> =
+        serde_wasm_bindgen::from_value(planet_longs.clone())?;
+
+    let mut longs = vec![0.0; 7];
+    for p in data {
+        if p.id >= 0 && p.id <= 6 {
+            longs[p.id as usize] = p.longitude;
+        }
+    }
+    Ok(vedic::ashtakavarga::calculate_yoga_pinda(
+        &bindus_vec,
+        &longs,
+        target_planet_id,
+    ))
+}
+
+/// Calculate House Pinda
+#[wasm_bindgen]
+pub fn calculate_house_pinda(
+    house_lord_shodhya_pinda: i32,
+    bindus_in_house: i32,
+) -> i32 {
+    vedic::ashtakavarga::calculate_house_pinda(house_lord_shodhya_pinda, bindus_in_house)
+}
+
+/// Calculate Bhava Bala (House Strength)
+#[wasm_bindgen]
+pub fn calculate_bhava_bala(
+    lagna_sign: u8,
+    planet_longs: &JsValue,
+    planet_shadbalas: &JsValue,
+) -> Result<vedic::bhava_bala::BhavaBalaResult, JsValue> {
+    let longs: Vec<f64> = serde_wasm_bindgen::from_value(planet_longs.clone())?;
+    let shadbalas: Vec<f64> = serde_wasm_bindgen::from_value(planet_shadbalas.clone())?;
+    Ok(vedic::bhava_bala::calculate_bhava_bala(lagna_sign, &longs, &shadbalas))
+}
+
+/// Calculate Vimsopaka divisional chart strength
+#[wasm_bindgen]
+pub fn calculate_vimsopaka_bala(
+    planet_longs: &JsValue,
+) -> Result<vedic::vimsopaka::VimsopakaResult, JsValue> {
+    let longs: Vec<f64> = serde_wasm_bindgen::from_value(planet_longs.clone())?;
+    Ok(vedic::vimsopaka::calculate_vimsopaka_bala(&longs))
+}
+
+/// Calculate Marriage Ashtakoota Milan (36 Gunas)
+#[wasm_bindgen]
+pub fn calculate_ashtakoota_milan(
+    boy_moon_long: f64,
+    girl_moon_long: f64,
+) -> vedic::compatibility::AshtakootaResult {
+    vedic::compatibility::calculate_ashtakoota_milan(boy_moon_long, girl_moon_long)
+}
+
+/// Analyze Manglik Dosha for a chart
+#[wasm_bindgen]
+pub fn analyze_manglik_dosha(
+    mars_long: f64,
+    lagna_long: f64,
+    moon_long: f64,
+    venus_long: f64,
+) -> vedic::compatibility::ManglikResult {
+    vedic::compatibility::analyze_manglik_dosha(mars_long, lagna_long, moon_long, venus_long)
+}
+
+/// Calculate overall compatibility report between a Boy and a Girl
+#[wasm_bindgen]
+pub fn calculate_compatibility_report(
+    boy_moon_long: f64,
+    boy_mars_long: f64,
+    boy_lagna_long: f64,
+    boy_venus_long: f64,
+    girl_moon_long: f64,
+    girl_mars_long: f64,
+    girl_lagna_long: f64,
+    girl_venus_long: f64,
+) -> vedic::compatibility::CompatibilityReport {
+    vedic::compatibility::calculate_compatibility_report(
+        boy_moon_long,
+        boy_mars_long,
+        boy_lagna_long,
+        boy_venus_long,
+        girl_moon_long,
+        girl_mars_long,
+        girl_lagna_long,
+        girl_venus_long,
+    )
+}
+
+/// Calculate Nadi astrology mapping
+#[wasm_bindgen]
+pub fn calculate_nadi_astrology(longitude: f64) -> vedic::interpretations::NadiInterpretation {
+    vedic::interpretations::calculate_nadi_astrology(longitude)
+}
+
+/// Predict progeny aspects
+#[wasm_bindgen]
+pub fn predict_progeny(
+    jupiter_long: f64,
+    fifth_house_long: f64,
+    fifth_lord_shadbala: f64,
+    d7_jupiter_sign: u8,
+) -> vedic::interpretations::ProgenyReport {
+    vedic::interpretations::predict_progeny(
+        jupiter_long,
+        fifth_house_long,
+        fifth_lord_shadbala,
+        d7_jupiter_sign,
+    )
+}
+
+/// Analyze career guidance and recommendations
+#[wasm_bindgen]
+pub fn analyze_career_guidance(
+    amatyakaraka_long: f64,
+    tenth_house_long: f64,
+    tenth_lord_shadbala: f64,
+    amatyakaraka_planet_idx: usize,
+) -> vedic::interpretations::CareerReport {
+    vedic::interpretations::analyze_career_guidance(
+        amatyakaraka_long,
+        tenth_house_long,
+        tenth_lord_shadbala,
+        amatyakaraka_planet_idx,
+    )
+}
+
+/// Calculate event timing favorability windows
+#[wasm_bindgen]
+pub fn calculate_event_timing(
+    birth_time_ms: f64,
+    natal_moon_long: f64,
+    natal_lagna_long: f64,
+    natal_planet_longs: &JsValue,
+    checkpoints_js: &JsValue,
+) -> Result<vedic::event_timing::EventTimingReport, JsValue> {
+    vedic::event_timing::calculate_event_timing(
+        birth_time_ms,
+        natal_moon_long,
+        natal_lagna_long,
+        natal_planet_longs,
+        checkpoints_js,
+    )
 }

@@ -245,3 +245,134 @@ pub fn moon_illumination(jd: f64) -> f64 {
         Err(_) => 0.0,
     }
 }
+
+pub fn calculate_single_planet_raw(
+    jd: f64,
+    planet_id: i32,
+    is_topo: bool,
+    topo_lat: f64,
+    topo_lon: f64,
+    topo_alt: f64,
+) -> (f64, f64, f64, f64) {
+    let mut xx = [0.0; 6];
+    let mut serr = [0i8; 256];
+    let mut iflag = 2 | 256; // SEFLG_SWIEPH | SEFLG_SPEED
+    if is_topo {
+        unsafe {
+            swe_bindings::swe_set_topo(topo_lon, topo_lat, topo_alt);
+        }
+        iflag |= 32768; // SEFLG_TOPOCTR
+    }
+
+    unsafe {
+        swe_bindings::swe_calc_ut(jd, planet_id, iflag, xx.as_mut_ptr(), serr.as_mut_ptr());
+    }
+
+    (xx[0], xx[1], xx[2], xx[3]) // (longitude, latitude, distance, speed)
+}
+
+pub fn get_planet_positions_bulk_extended(
+    jd: f64,
+    ayanamsha_val: f64,
+    is_topo: bool,
+    topo_lat: f64,
+    topo_lon: f64,
+    topo_alt: f64,
+    use_true_node: bool,
+    include_outer: bool,
+    include_asteroids: bool,
+) -> alloc::vec::Vec<PlanetData> {
+    let mut planets = alloc::vec::Vec::new();
+    
+    // Core 7 planets + Node
+    let mut planet_ids = alloc::vec![
+        (0, "Sun"), (1, "Moon"), (2, "Mercury"), (3, "Venus"), 
+        (4, "Mars"), (5, "Jupiter"), (6, "Saturn")
+    ];
+
+    if use_true_node {
+        planet_ids.push((11, "Rahu"));
+    } else {
+        planet_ids.push((10, "Rahu"));
+    }
+
+    if include_outer {
+        planet_ids.push((7, "Uranus"));
+        planet_ids.push((8, "Neptune"));
+        planet_ids.push((9, "Pluto"));
+    }
+
+    if include_asteroids {
+        planet_ids.push((15, "Chiron"));
+        planet_ids.push((17, "Ceres"));
+        planet_ids.push((18, "Pallas"));
+        planet_ids.push((19, "Juno"));
+        planet_ids.push((20, "Vesta"));
+    }
+
+    // First pass: get all raw data
+    let mut raw_positions = alloc::vec::Vec::new();
+    for (id, name) in planet_ids {
+        let (lon, lat, dist, speed) = calculate_single_planet_raw(jd, id, is_topo, topo_lat, topo_lon, topo_alt);
+        
+        let mut sid_lon = lon - ayanamsha_val;
+        if sid_lon < 0.0 { sid_lon += 360.0; }
+        
+        raw_positions.push((id, name, sid_lon % 360.0, lat, dist, speed));
+    }
+
+    // Find Sun's sidereal longitude for combustion check
+    let sun_lon = raw_positions[0].2;
+
+    for (id, name, lon, lat, dist, speed) in raw_positions {
+        let is_retro = speed < 0.0;
+        
+        // Combustion logic
+        let mut diff = (lon - sun_lon).abs();
+        if diff > 180.0 { diff = 360.0 - diff; }
+        
+        let is_combust = match name {
+            "Moon" => diff < 12.0,
+            "Mars" => diff < 17.0,
+            "Mercury" => if is_retro { diff < 12.0 } else { diff < 14.0 },
+            "Jupiter" => diff < 11.0,
+            "Venus" => if is_retro { diff < 8.0 } else { diff < 10.0 },
+            "Saturn" => diff < 15.0,
+            _ => false,
+        };
+
+        let dignity = crate::vedic::dignity::calculate_dignity(name, lon);
+
+        planets.push(PlanetData {
+            id,
+            name: name.to_string(),
+            longitude: lon,
+            latitude: lat,
+            distance: dist,
+            speed: speed,
+            is_retrograde: is_retro,
+            is_combust,
+            dignity,
+        });
+    }
+
+    // Add Ketu (Rahu + 180)
+    if let Some(rahu_pos) = planets.iter().position(|p| p.name == "Rahu") {
+        let rahu_lon = planets[rahu_pos].longitude;
+        let ketu_lon = (rahu_lon + 180.0) % 360.0;
+        planets.push(PlanetData {
+            id: 12, // Ketu is 12 in our extended list
+            name: "Ketu".to_string(),
+            longitude: ketu_lon,
+            latitude: -planets[rahu_pos].latitude,
+            distance: planets[rahu_pos].distance,
+            speed: planets[rahu_pos].speed,
+            is_retrograde: planets[rahu_pos].is_retrograde,
+            is_combust: false,
+            dignity: crate::vedic::dignity::Dignity::Neutral,
+        });
+    }
+
+    planets
+}
+

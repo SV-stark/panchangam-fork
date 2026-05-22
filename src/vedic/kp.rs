@@ -40,7 +40,6 @@ const KP_LORD_ORDER: [i32; 9] = [9, 6, 1, 2, 3, 8, 5, 7, 4];
 const KP_LORD_DURATIONS: [f64; 9] = [7.0, 20.0, 6.0, 10.0, 7.0, 18.0, 16.0, 19.0, 17.0];
 
 /// Calculate KP Lords for a given longitude
-#[wasm_bindgen]
 pub fn calculate_kp_lords(long: f64) -> KPLordInfo {
     // Normalize logic
     let mut l = long % 360.0;
@@ -153,7 +152,6 @@ pub struct KPSignificators {
 /// # Arguments
 /// * `planet_longs` - Map of planets and their longitudes (0=Sun..8=Ketu)
 /// * `cusps` - 12 house cusps (KP cusps)
-#[wasm_bindgen]
 pub fn calculate_kp_significators(planet_longs: &JsValue, cusps: Vec<f64>) -> KPSignificators {
     let longs: BTreeMap<i32, f64> =
         serde_wasm_bindgen::from_value(planet_longs.clone()).unwrap_or_default();

@@ -30,7 +30,6 @@ pub struct SudarshanChakra {
 /// * `lagna_sign` - Natal Lagna Sign (1-12)
 /// * `moon_sign` - Natal Moon Sign (1-12)
 /// * `sun_sign` - Natal Sun Sign (1-12)
-#[wasm_bindgen]
 pub fn calculate_sudarshan_chakra(lagna_sign: u8, moon_sign: u8, sun_sign: u8) -> SudarshanChakra {
     let mut houses = vec![];
 

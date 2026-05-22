@@ -583,3 +583,26 @@ pub fn calculate_pinda(
     // 3. Shodhya Pinda = Rasi Pinda + Graha Pinda
     rasi_pinda + graha_pinda
 }
+
+/// Calculate Yoga Pinda (Planetary + Zodiacal Shodhya Pinda)
+pub fn calculate_yoga_pinda(
+    reduced_bindus: &[i32],
+    planet_positions: &[f64],
+    target_planet_id: i32,
+) -> i32 {
+    calculate_pinda(reduced_bindus, planet_positions, target_planet_id)
+}
+
+/// Calculate House Pinda (Bhava Pinda) for a house/sign
+/// Formula: (Shodhya Pinda of House Lord * SAV Bindus in House) / 28
+pub fn calculate_house_pinda(
+    house_lord_shodhya_pinda: i32,
+    bindus_in_house: i32,
+) -> i32 {
+    if bindus_in_house <= 0 {
+        0
+    } else {
+        (house_lord_shodhya_pinda * bindus_in_house) / 28
+    }
+}
+

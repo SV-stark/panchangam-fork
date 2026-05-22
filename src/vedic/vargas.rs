@@ -42,6 +42,7 @@ pub enum VargaType {
     D40 = 40,
     D45 = 45,
     D60 = 60,
+    D150 = 150,
     D249 = 249,
 }
 
@@ -187,6 +188,7 @@ pub fn calculate_varga_position(
         VargaType::D40 => calculate_d40(long_deg),
         VargaType::D45 => calculate_d45(long_deg),
         VargaType::D60 => calculate_d60(long_deg),
+        VargaType::D150 => calculate_d150(long_deg),
         VargaType::D249 => calculate_d249(long_deg),
     }
 }
@@ -685,3 +687,24 @@ fn calculate_d249(long: f64) -> VargaPosition {
 
     create_pos(target_0 as u8 + 1, projected_deg)
 }
+
+// D-150 (Nadi Amsa)
+fn calculate_d150(long: f64) -> VargaPosition {
+    let sign_0 = (long / 30.0).floor() as u8;
+    let deg = long % 30.0;
+    let part_size = 30.0 / 150.0; // 0.2 degrees (12 minutes)
+    let part = (deg / part_size).floor() as u8; // 0..149
+    let projected_deg = (deg % part_size) * 150.0;
+
+    let is_odd_sign = sign_0 % 2 == 0;
+    let target_0 = if is_odd_sign {
+        (sign_0 + part) % 12
+    } else {
+        // Even sign: starting from 9th sign, count in reverse
+        let start_sign_0 = (sign_0 + 8) % 12;
+        (start_sign_0 as i32 - part as i32 + 120) as u8 % 12
+    };
+
+    create_pos(target_0 + 1, projected_deg)
+}
+

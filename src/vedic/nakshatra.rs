@@ -128,3 +128,46 @@ pub fn nakshatra_start_time(jd: f64, ayanamsha_mode: AyanamshaMode) -> f64 {
         target_long
     ).unwrap_or(jd)
 }
+
+/// Detailed Abhijit Nakshatra boundaries
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[wasm_bindgen(getter_with_clone)]
+pub struct AbhijitBoundaries {
+    pub start_deg: f64,
+    pub end_deg: f64,
+}
+
+#[wasm_bindgen]
+pub fn get_abhijit_boundaries() -> AbhijitBoundaries {
+    AbhijitBoundaries {
+        start_deg: 276.6666666666667,
+        end_deg: 280.8888888888889,
+    }
+}
+
+#[wasm_bindgen]
+pub fn is_in_abhijit_nakshatra(longitude: f64) -> bool {
+    let normalized = longitude % 360.0;
+    normalized >= 276.6666666666667 && normalized <= 280.8888888888889
+}
+
+/// Calculate Nakshatra including Abhijit as the 28th nakshatra (inserted between Uttara Ashadha and Shravana)
+#[wasm_bindgen]
+pub fn get_nakshatra_with_abhijit(jd: f64, ayanamsha_mode: AyanamshaMode) -> NakshatraInfo {
+    let moon_tropical = moon_longitude(jd);
+    let ayanamsha = get_ayanamsha(ayanamsha_mode, jd);
+    let moon_sidereal = tropical_to_sidereal(moon_tropical, ayanamsha) % 360.0;
+
+    if is_in_abhijit_nakshatra(moon_sidereal) {
+        NakshatraInfo {
+            index: 28,
+            name: "Abhijit".to_string(),
+            ruler: "Sun".to_string(),
+            quality: "Auspicious/Fixed".to_string(),
+            pada: 1,
+        }
+    } else {
+        calculate_nakshatra(jd, ayanamsha_mode)
+    }
+}
+

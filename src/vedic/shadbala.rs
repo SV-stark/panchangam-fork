@@ -13,6 +13,7 @@ use wasm_bindgen::prelude::*;
 pub struct PlanetInput {
     pub id: i32,
     pub longitude: f64,
+    #[serde(default)]
     pub speed: f64,
 }
 

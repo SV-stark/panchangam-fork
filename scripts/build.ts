@@ -44,13 +44,17 @@ const args = [
 
 console.log(`[Build] Running: deno ${args.join(" ")}`);
 
+const env: Record<string, string> = {};
+const wasiSdkPath = Deno.env.get("WASI_SDK_PATH");
+if (wasiSdkPath) {
+  env["WASI_SDK_PATH"] = wasiSdkPath;
+}
+
 const cmd = new Deno.Command(Deno.execPath(), {
   args,
   stdout: "inherit",
   stderr: "inherit",
-  env: {
-    "WASI_SDK_PATH": Deno.env.get("WASI_SDK_PATH")!,
-  },
+  env,
 });
 
 const status = await cmd.spawn().status;
