@@ -11,6 +11,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
+use serde_wasm_bindgen;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[wasm_bindgen(getter_with_clone)]
@@ -203,4 +204,113 @@ pub fn calculate_vedha(
         obstruction_planet,
         house_from_moon,
     }
+}
+/// Check if Panchak is active for given Moon longitude
+///
+/// Panchak (five-fold inauspicious period) is active when Moon transits:
+/// - Dhanishtha 3rd/4th pada: 296.6667°–300°
+/// - Shatabhisha:             306.6667°–320°
+/// - Purva Bhadrapada:        320°–333.3333°
+/// - Uttara Bhadrapada:       333.3333°–346.6667°
+/// - Revati:                  346.6667°–360°
+///
+/// Collectively: Moon longitude >= 293.3333° (start of Dhanishtha 3rd pada) and < 360°.
+pub fn is_panchak_active(moon_long: f64) -> bool {
+    let norm = moon_long.rem_euclid(360.0);
+    norm >= 293.3333
+}
+
+/// Predict Sade Sati cycles over a range of years
+///
+/// Uses an approximate Saturn sidereal longitude:
+/// - Base: ~300° on Jan 1, 2000
+/// - Mean motion: 360/29.46 ≈ 12.22 degrees/year
+///
+/// Returns a JSON array of `{start_year, end_year, phase}` objects.
+pub fn predict_sade_sati_cycles(
+    natal_moon_long: f64,
+    start_year: i32,
+    duration_years: i32,
+) -> JsValue {
+    #[derive(Serialize)]
+    struct SadeSatiCycle {
+        start_year: i32,
+        end_year: i32,
+        phase: String,
+    }
+
+    let natal_moon_sign = (natal_moon_long / 30.0).floor() as i32; // 0-based (0=Aries)
+
+    // Approximate Saturn sidereal longitude for a given year (Jan 1 approximation)
+    let saturn_long_approx = |year: i32| -> f64 {
+        (300.0_f64 + (year - 2000) as f64 * 12.22_f64).rem_euclid(360.0)
+    };
+
+    let mut cycles: Vec<SadeSatiCycle> = Vec::new();
+
+    // Track current period being accumulated
+    let mut period_start: Option<i32> = None;
+    let mut period_phase: Option<String> = None;
+
+    let end_year_exclusive = start_year + duration_years;
+
+    for year in start_year..=end_year_exclusive {
+        let sat_long = saturn_long_approx(year);
+        let sat_sign = (sat_long / 30.0).floor() as i32; // 0-based
+
+        // Relative position of Saturn vs natal Moon sign (mod 12)
+        let rel = (sat_sign - natal_moon_sign).rem_euclid(12) + 1; // 1-indexed
+
+        let phase_opt: Option<&str> = match rel {
+            12 => Some("Rising"),
+            1  => Some("Peak"),
+            2  => Some("Setting"),
+            _  => None,
+        };
+
+        match phase_opt {
+            Some(phase) => {
+                let phase_str = phase.to_string();
+                match &period_phase {
+                    Some(prev_phase) if *prev_phase == phase_str => {
+                        // Same phase continuing — extend by doing nothing (end_year updated at flush)
+                    }
+                    _ => {
+                        // Phase changed (or new) — flush previous period if any
+                        if let (Some(ps), Some(pp)) = (period_start, period_phase.take()) {
+                            cycles.push(SadeSatiCycle {
+                                start_year: ps,
+                                end_year: year - 1,
+                                phase: pp,
+                            });
+                        }
+                        period_start = Some(year);
+                        period_phase = Some(phase_str);
+                    }
+                }
+            }
+            None => {
+                // Not in Sade Sati — flush any open period
+                if let (Some(ps), Some(pp)) = (period_start, period_phase.take()) {
+                    cycles.push(SadeSatiCycle {
+                        start_year: ps,
+                        end_year: year - 1,
+                        phase: pp,
+                    });
+                }
+                period_start = None;
+            }
+        }
+    }
+
+    // Flush any trailing open period
+    if let (Some(ps), Some(pp)) = (period_start, period_phase) {
+        cycles.push(SadeSatiCycle {
+            start_year: ps,
+            end_year: end_year_exclusive,
+            phase: pp,
+        });
+    }
+
+    serde_wasm_bindgen::to_value(&cycles).unwrap_or(JsValue::NULL)
 }

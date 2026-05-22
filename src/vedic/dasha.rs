@@ -599,3 +599,80 @@ pub fn calculate_narayana(
         periods,
     }
 }
+
+/// A single entry in a Vimshottari timeline
+/// Represents a mahadasha or antardasha period
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DashaPeriodEntry {
+    pub dasha_lord: String,
+    pub antardasha_lord: String,
+    pub start_ms: f64,
+    pub end_ms: f64,
+    pub level: u8, // 1=Mahadasha, 2=Antardasha
+}
+
+/// Calculate a complete Vimshottari timeline with all Mahadashas and Antardashas
+/// Returns a chronological list of all periods.
+pub fn calculate_vimshottari_timeline(
+    moon_long: f64,
+    birth_time_ms: f64,
+    duration_years: f64,
+) -> Vec<DashaPeriodEntry> {
+    const LORDS: [&str; 9] = ["Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury"];
+    const YEARS: [f64; 9] = [7.0, 20.0, 6.0, 10.0, 7.0, 18.0, 16.0, 19.0, 17.0];
+    const MS_PER_YEAR: f64 = 365.25 * 24.0 * 3600.0 * 1000.0;
+
+    // 1. Determine starting Dasha (same logic as calculate_vimshottari)
+    let nak_span = 360.0 / 27.0;
+    let nak_idx = (moon_long / nak_span).floor() as usize % 27;
+    let lord_idx = nak_idx % 9;
+    let deg_in_nak = moon_long - (nak_idx as f64 * nak_span);
+    let fraction_remaining = 1.0 - (deg_in_nak / nak_span);
+
+    let mut current_ms = birth_time_ms;
+    let end_ms = birth_time_ms + (duration_years * MS_PER_YEAR);
+    let mut entries = Vec::new();
+
+    // Start from balance of first dasha
+    let first_balance_years = fraction_remaining * YEARS[lord_idx];
+
+    let mut maha_idx = lord_idx;
+    let mut first_period = true;
+
+    while current_ms < end_ms {
+        let maha_years = if first_period { first_balance_years } else { YEARS[maha_idx] };
+        let maha_end_ms = current_ms + maha_years * MS_PER_YEAR;
+        let maha_lord = LORDS[maha_idx];
+
+        // Generate Antardashas within this Mahadasha
+        let mut antar_ms = current_ms;
+        let mut antar_idx = maha_idx;
+        for _ in 0..9 {
+            // Antardasha duration = maha_years * antar_years / 120.0
+            let antar_years = (maha_years * YEARS[antar_idx]) / 120.0;
+            let antar_end_ms = antar_ms + antar_years * MS_PER_YEAR;
+
+            if antar_ms < end_ms {
+                entries.push(DashaPeriodEntry {
+                    dasha_lord: maha_lord.to_string(),
+                    antardasha_lord: LORDS[antar_idx].to_string(),
+                    start_ms: antar_ms,
+                    end_ms: antar_end_ms.min(end_ms),
+                    level: 2,
+                });
+            }
+
+            antar_ms = antar_end_ms;
+            antar_idx = (antar_idx + 1) % 9;
+            if antar_ms >= maha_end_ms { break; }
+        }
+
+        current_ms = maha_end_ms;
+        maha_idx = (maha_idx + 1) % 9;
+        first_period = false;
+
+        if current_ms >= end_ms { break; }
+    }
+
+    entries
+}

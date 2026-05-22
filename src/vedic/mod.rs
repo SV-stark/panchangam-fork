@@ -1,5 +1,6 @@
 //! Vedic calendar calculations module
 
+pub mod aspects;
 pub mod ashtakavarga;
 pub mod bhava_bala;
 pub mod calendar;
@@ -25,6 +26,8 @@ pub mod transits;
 pub mod vara;
 pub mod vargas;
 pub mod vimsopaka;
+pub mod moon_phase;
+pub mod prashna;
 pub mod yoga;
 pub mod yogas;
 

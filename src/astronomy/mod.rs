@@ -5,3 +5,4 @@ pub mod planets;
 pub mod ayanamsha;
 pub mod solver;
 pub mod houses;
+pub mod combustion;

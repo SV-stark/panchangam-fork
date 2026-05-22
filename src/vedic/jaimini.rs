@@ -390,3 +390,188 @@ pub fn calculate_chara_dasha(
     
     periods
 }
+
+// ─────────────────────────────────────────────
+// New Jaimini helper functions
+// ─────────────────────────────────────────────
+
+/// Calculate Karakamsa sign (Navamsha sign occupied by the AtmaKaraka)
+///
+/// Formula (standard D9):
+///   sign = (((longitude / 30).floor() * 9) + ((longitude % 30) / (30/9)).floor()) % 12
+pub fn calculate_karakamsa(planet_longitudes: &[(i32, f64)]) -> usize {
+    // Find AtmaKaraka: highest degree within its sign (longitude % 30)
+    let mut candidates: Vec<(i32, f64)> = planet_longitudes
+        .iter()
+        .filter(|(id, _)| *id <= 6) // Only 7 classical planets
+        .map(|&(id, long)| (id, long % 30.0))
+        .collect();
+
+    // Sort descending by degree in sign
+    candidates.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+    // AtmaKaraka has highest degree
+    if candidates.is_empty() {
+        return 0;
+    }
+    let (ak_id, _) = candidates[0];
+
+    // Find full longitude of AtmaKaraka
+    let ak_long = planet_longitudes
+        .iter()
+        .find(|(id, _)| *id == ak_id)
+        .map(|(_, l)| *l)
+        .unwrap_or(0.0);
+
+    let normalized = ((ak_long % 360.0) + 360.0) % 360.0;
+    let sign_idx = (normalized / 30.0).floor() as usize; // 0-11
+    let deg_in_sign = normalized % 30.0;
+    let navamsha_offset = (deg_in_sign / (30.0 / 9.0)).floor() as usize; // 0-8
+
+    (sign_idx * 9 + navamsha_offset) % 12
+}
+
+/// Get Rashi Drishti (sign aspects) for a given sign index (0=Aries..11=Pisces)
+///
+/// Jaimini Rashi Drishti rules:
+/// - Movable (Chara) signs aspect all Fixed signs except the adjacent one
+/// - Fixed (Sthira) signs aspect all Movable signs except the adjacent one
+/// - Dual (Dwiswabhava) signs aspect all other Dual signs
+pub fn get_rashi_drishti(sign: usize) -> Vec<usize> {
+    match sign {
+        // Movable signs: 0=Ari, 3=Can, 6=Lib, 9=Cap
+        0 => vec![4, 7, 10],  // Aries aspects Leo, Scorpio, Aquarius (not Taurus=adjacent)
+        3 => vec![1, 7, 10],  // Cancer aspects Taurus, Scorpio, Aquarius (not Leo=adjacent)
+        6 => vec![1, 4, 10],  // Libra aspects Taurus, Leo, Aquarius (not Scorpio=adjacent)
+        9 => vec![1, 4, 7],   // Capricorn aspects Taurus, Leo, Scorpio (not Aquarius=adjacent)
+
+        // Fixed signs: 1=Tau, 4=Leo, 7=Sco, 10=Aqu
+        1 => vec![0, 6, 9],   // Taurus aspects Aries, Libra, Capricorn (not Cancer=adjacent)
+        4 => vec![0, 3, 9],   // Leo aspects Aries, Cancer, Capricorn (not Libra=adjacent)
+        7 => vec![0, 3, 6],   // Scorpio aspects Aries, Cancer, Libra (not Capricorn=adjacent)
+        10 => vec![3, 6, 9],  // Aquarius aspects Cancer, Libra, Capricorn (not Aries=adjacent)
+
+        // Dual signs: 2=Gem, 5=Vir, 8=Sag, 11=Pis
+        2 => vec![5, 8, 11],  // Gemini aspects Virgo, Sagittarius, Pisces
+        5 => vec![2, 8, 11],  // Virgo aspects Gemini, Sagittarius, Pisces
+        8 => vec![2, 5, 11],  // Sagittarius aspects Gemini, Virgo, Pisces
+        11 => vec![2, 5, 8],  // Pisces aspects Gemini, Virgo, Sagittarius
+
+        _ => Vec::new(),
+    }
+}
+
+/// Calculate Arudha Padas for all 12 houses
+///
+/// # Arguments
+/// * `lagna_sign` - Ascendant sign index (0=Aries..11=Pisces)
+/// * `planet_longs` - Slice of (planet_id, longitude) tuples
+///
+/// Returns Vec<usize> of 12 Arudha Pada signs (one per house)
+pub fn calculate_arudha_padas(lagna_sign: usize, planet_longs: &[(i32, f64)]) -> Vec<usize> {
+    let mut padas = Vec::with_capacity(12);
+
+    for h in 0..12usize {
+        let house_sign = (lagna_sign + h) % 12;
+        let lord_id = get_lord_of_sign(house_sign);
+
+        // Find lord's sign
+        let lord_sign = planet_longs
+            .iter()
+            .find(|(id, _)| *id == lord_id)
+            .map(|(_, long)| ((long / 30.0).floor() as usize) % 12)
+            .unwrap_or(house_sign); // fallback to same sign if planet not found
+
+        // Arudha = lord_sign + (lord_sign - house_sign) positions forward
+        let distance = (lord_sign as i32 - house_sign as i32 + 12).rem_euclid(12) as usize;
+        let mut arudha = (lord_sign + distance) % 12;
+
+        // BPHS Exception 1: if arudha == house_sign itself, add 9 (10th from it)
+        if arudha == house_sign {
+            arudha = (arudha + 9) % 12;
+        }
+
+        // BPHS Exception 2: if arudha is 7th from house_sign, add 3 more (4th from house)
+        let seventh_from_house = (house_sign + 6) % 12;
+        if arudha == seventh_from_house {
+            arudha = (arudha + 3) % 12;
+        }
+
+        padas.push(arudha);
+    }
+
+    padas
+}
+
+use serde::Serialize as SerdeSerialize;
+
+#[derive(SerdeSerialize)]
+struct ArgalaPosition {
+    position: usize,
+    planet_ids: Vec<i32>,
+    is_obstructed: bool,
+}
+
+#[derive(SerdeSerialize)]
+struct ArgalaResult {
+    argala_planets: Vec<ArgalaPosition>,
+    net_argala_strength: i32,
+}
+
+/// Calculate Argalas (interventions) and Vi-Argalas (obstructions) for a sign
+///
+/// Argala positions from sign: 2nd, 4th, 11th houses
+/// Vi-Argala (obstruction) positions: 12th, 10th, 3rd houses
+///
+/// Returns JsValue with argala_planets array and net_argala_strength
+pub fn calculate_argalas(sign: usize, planet_longitudes: &[(i32, f64)]) -> wasm_bindgen::JsValue {
+    // Helper: collect planet IDs in a given sign (0-11)
+    let planets_in_sign = |target_sign: usize| -> Vec<i32> {
+        planet_longitudes
+            .iter()
+            .filter(|(_, long)| {
+                let s = ((long / 30.0).floor() as usize) % 12;
+                s == target_sign
+            })
+            .map(|(id, _)| *id)
+            .collect()
+    };
+
+    // Argala positions (house offsets from sign, 0-indexed: 1 = 2nd house = +1)
+    let argala_offsets: [(usize, usize); 3] = [
+        (1, 11),  // 2nd house argala, obstructed by 12th
+        (3, 9),   // 4th house argala, obstructed by 10th
+        (10, 2),  // 11th house argala, obstructed by 3rd
+    ];
+
+    let mut argala_planets: Vec<ArgalaPosition> = Vec::new();
+    let mut net_strength: i32 = 0;
+
+    for &(argala_offset, viargala_offset) in &argala_offsets {
+        let argala_sign = (sign + argala_offset) % 12;
+        let viargala_sign = (sign + viargala_offset) % 12;
+
+        let argala_ids = planets_in_sign(argala_sign);
+        let viargala_ids = planets_in_sign(viargala_sign);
+
+        let is_obstructed = !viargala_ids.is_empty() && viargala_ids.len() >= argala_ids.len();
+
+        if !argala_ids.is_empty() {
+            if !is_obstructed {
+                net_strength += 1;
+            }
+            argala_planets.push(ArgalaPosition {
+                position: argala_sign,
+                planet_ids: argala_ids,
+                is_obstructed,
+            });
+        }
+    }
+
+    let result = ArgalaResult {
+        argala_planets,
+        net_argala_strength: net_strength,
+    };
+
+    serde_wasm_bindgen::to_value(&result).unwrap_or(wasm_bindgen::JsValue::NULL)
+}

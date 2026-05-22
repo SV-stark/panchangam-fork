@@ -93,6 +93,58 @@ impl Location {
             altitude,
         }
     }
+
+    #[wasm_bindgen]
+    pub fn from_dms(
+        lat_deg: f64,
+        lat_min: f64,
+        lat_sec: f64,
+        lat_dir: &str,
+        lon_deg: f64,
+        lon_min: f64,
+        lon_sec: f64,
+        lon_dir: &str,
+    ) -> Location {
+        let mut lat = lat_deg + lat_min / 60.0 + lat_sec / 3600.0;
+        if lat_dir.eq_ignore_ascii_case("S") {
+            lat = -lat;
+        }
+        let mut lon = lon_deg + lon_min / 60.0 + lon_sec / 3600.0;
+        if lon_dir.eq_ignore_ascii_case("W") {
+            lon = -lon;
+        }
+        Location {
+            latitude: lat,
+            longitude: lon,
+            altitude: 0.0,
+        }
+    }
+
+    #[wasm_bindgen]
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(self).unwrap_or_default()
+    }
+
+    #[wasm_bindgen]
+    pub fn from_json(json_str: &str) -> Result<Location, JsValue> {
+        serde_json::from_str(json_str).map_err(|e| JsValue::from_str(&alloc::format!("{}", e)))
+    }
+}
+
+#[wasm_bindgen]
+pub fn format_degrees_to_dms(deg: f64, is_lat: bool) -> String {
+    let abs_deg = deg.abs();
+    let d = abs_deg.floor();
+    let m = ((abs_deg - d) * 60.0).floor();
+    let s = ((abs_deg - d - m / 60.0) * 3600.0).round();
+    
+    let dir = if is_lat {
+        if deg >= 0.0 { "N" } else { "S" }
+    } else {
+        if deg >= 0.0 { "E" } else { "W" }
+    };
+    
+    alloc::format!("{}° {}' {}\" {}", d, m, s, dir)
 }
 
 /// Calculate sunrise time for a given date and location
@@ -120,6 +172,36 @@ pub fn calculate_sunset(year: i32, month: u32, day: u32, location: &Location) ->
         location.latitude,
         location.longitude,
         location.altitude,
+    )
+}
+
+/// Calculate rise time for any planet on a given Julian Day
+/// Returns Unix timestamp in milliseconds
+#[wasm_bindgen]
+pub fn calculate_planet_rise_time(jd: f64, planet_id: i32, location: &Location) -> Result<f64, JsValue> {
+    geo::sunrise_sunset::calculate_planet_rise_set_transit(
+        jd, planet_id, true, false, false,
+        location.latitude, location.longitude, location.altitude,
+    )
+}
+
+/// Calculate set time for any planet on a given Julian Day
+/// Returns Unix timestamp in milliseconds
+#[wasm_bindgen]
+pub fn calculate_planet_set_time(jd: f64, planet_id: i32, location: &Location) -> Result<f64, JsValue> {
+    geo::sunrise_sunset::calculate_planet_rise_set_transit(
+        jd, planet_id, false, true, false,
+        location.latitude, location.longitude, location.altitude,
+    )
+}
+
+/// Calculate meridian transit time for any planet on a given Julian Day
+/// Returns Unix timestamp in milliseconds
+#[wasm_bindgen]
+pub fn calculate_planet_meridian_transit(jd: f64, planet_id: i32, location: &Location) -> Result<f64, JsValue> {
+    geo::sunrise_sunset::calculate_planet_rise_set_transit(
+        jd, planet_id, false, false, true,
+        location.latitude, location.longitude, location.altitude,
     )
 }
 
@@ -351,6 +433,47 @@ pub fn calculate_chara_dasha_periods(
     // Ensure all 9 planets for best results
     let periods = vedic::jaimini::calculate_chara_dasha(&data, ascendant_sign as usize, start_year);
     Ok(periods.into_boxed_slice())
+}
+
+/// Calculate Karakamsa sign (Navamsha sign of Atmakaraka)
+#[wasm_bindgen]
+pub fn calculate_karakamsa(planet_longs: &JsValue) -> Result<usize, JsValue> {
+    let data: Vec<(i32, f64)> = serde_wasm_bindgen::from_value(planet_longs.clone())?;
+    Ok(vedic::jaimini::calculate_karakamsa(&data))
+}
+
+/// Get Rashi Drishti (sign aspects) for a given sign
+#[wasm_bindgen]
+pub fn get_rashi_drishti(sign: usize) -> Result<JsValue, JsValue> {
+    let aspects = vedic::jaimini::get_rashi_drishti(sign);
+    Ok(serde_wasm_bindgen::to_value(&aspects)?)
+}
+
+/// Calculate Arudha Padas with BPHS exceptions
+#[wasm_bindgen]
+pub fn calculate_arudha_padas(lagna_sign: usize, planet_longs: &JsValue) -> Result<JsValue, JsValue> {
+    let data: Vec<(i32, f64)> = serde_wasm_bindgen::from_value(planet_longs.clone())?;
+    let padas = vedic::jaimini::calculate_arudha_padas(lagna_sign, &data);
+    Ok(serde_wasm_bindgen::to_value(&padas)?)
+}
+
+/// Calculate Argalas and Vi-Argalas for a sign
+#[wasm_bindgen]
+pub fn calculate_argalas(sign: usize, planet_longs: &JsValue) -> Result<JsValue, JsValue> {
+    let data: Vec<(i32, f64)> = serde_wasm_bindgen::from_value(planet_longs.clone())?;
+    Ok(vedic::jaimini::calculate_argalas(sign, &data))
+}
+
+/// Get KP Sub Lord for a longitude
+#[wasm_bindgen]
+pub fn get_kp_sub_lord(longitude: f64) -> i32 {
+    vedic::kp::get_sub_lord(longitude)
+}
+
+/// Get KP Sub-Sub Lord for a longitude
+#[wasm_bindgen]
+pub fn get_kp_sub_sub_lord(longitude: f64) -> i32 {
+    vedic::kp::get_sub_sub_lord(longitude)
 }
 
 /// Calculate Sarvashtakavarga (Ashtakavarga Totals)
@@ -820,4 +943,125 @@ pub fn calculate_event_timing(
         natal_planet_longs,
         checkpoints_js,
     )
+}
+
+/// Check if Panchak is active for given Moon longitude
+#[wasm_bindgen]
+pub fn is_panchak_active(moon_long: f64) -> bool {
+    vedic::transits::is_panchak_active(moon_long)
+}
+
+/// Predict Sade Sati cycles over a range of years
+#[wasm_bindgen]
+pub fn predict_sade_sati_cycles(
+    natal_moon_long: f64,
+    start_year: i32,
+    duration_years: i32,
+) -> JsValue {
+    vedic::transits::predict_sade_sati_cycles(natal_moon_long, start_year, duration_years)
+}
+
+/// Calculate all planetary aspects (Parashari rules)
+#[wasm_bindgen]
+pub fn calculate_aspects(planet_longs: &JsValue) -> Result<JsValue, JsValue> {
+    let data: Vec<(i32, f64)> = serde_wasm_bindgen::from_value(planet_longs.clone())
+        .map_err(|e| JsValue::from_str(&alloc::format!("{}", e)))?;
+    let aspects = vedic::aspects::calculate_aspects_impl(&data);
+    serde_wasm_bindgen::to_value(&aspects)
+        .map_err(|e| JsValue::from_str(&alloc::format!("{}", e)))
+}
+
+
+/// Calculate Prashna Arudha from seed number
+#[wasm_bindgen]
+pub fn calculate_prashna_arudha(seed: i32) -> usize {
+    vedic::prashna::calculate_prashna_arudha(seed)
+}
+
+/// Calculate all Prashna Sphutas
+#[wasm_bindgen]
+pub fn calculate_prashna_sphutas(
+    lagna_long: f64,
+    moon_long: f64,
+    sun_long: f64,
+    rahu_long: f64,
+    mars_long: f64,
+) -> vedic::prashna::PrashnaSphutas {
+    vedic::prashna::calculate_prashna_sphutas(lagna_long, moon_long, sun_long, rahu_long, mars_long)
+}
+
+/// Calculate Gulika Sphuta time (returns ms timestamp of Gulika start)
+#[wasm_bindgen]
+pub fn calculate_gulika_sphuta(
+    sunrise_ms: f64,
+    sunset_ms: f64,
+    weekday_idx: u8,
+    is_day: bool,
+) -> f64 {
+    vedic::prashna::calculate_gulika_sphuta(sunrise_ms, sunset_ms, weekday_idx, is_day)
+}
+
+/// Calculate Moon phase details
+#[wasm_bindgen]
+pub fn calculate_moon_phase_details(
+    sun_long: f64,
+    moon_long: f64,
+) -> vedic::moon_phase::MoonPhaseDetails {
+    vedic::moon_phase::calculate_moon_phase_details(sun_long, moon_long)
+}
+
+/// Calculate Vimshottari Dasha complete timeline with Antardashas
+#[wasm_bindgen]
+pub fn calculate_vimshottari_timeline(
+    moon_long: f64,
+    birth_time_ms: f64,
+    duration_years: f64,
+) -> Result<JsValue, JsValue> {
+    let timeline = vedic::dasha::calculate_vimshottari_timeline(moon_long, birth_time_ms, duration_years);
+    Ok(serde_wasm_bindgen::to_value(&timeline)?)
+}
+
+/// Calculate planetary combustion analysis
+#[wasm_bindgen]
+pub fn calculate_combustion_info(
+    sun_longitude: f64,
+    planet_longitude: f64,
+    planet_id: i32,
+    is_retrograde: bool,
+) -> astronomy::combustion::CombustionInfo {
+    astronomy::combustion::calculate_combustion_info(sun_longitude, planet_longitude, planet_id, is_retrograde)
+}
+
+/// Analyze Ashtakavarga transit strength
+/// Returns bindu count and favorability for a transit sign
+#[wasm_bindgen]
+pub fn analyze_ashtakavarga_transit(
+    transit_sign: usize,        // 0-11 sign that planet is transiting into
+    sav_bindus: &JsValue,       // Array of 12 SAV bindu totals
+) -> Result<JsValue, JsValue> {
+    let bindus: Vec<i32> = serde_wasm_bindgen::from_value(sav_bindus.clone())?;
+    if transit_sign >= 12 || bindus.len() != 12 {
+        return Err(JsValue::from_str("Invalid input"));
+    }
+    let bindu_count = bindus[transit_sign];
+    let is_favorable = bindu_count >= 28;
+
+    #[derive(serde::Serialize)]
+    struct TransitAnalysis { sign: usize, bindu_count: i32, is_favorable: bool, threshold: i32 }
+    let result = TransitAnalysis { sign: transit_sign, bindu_count, is_favorable, threshold: 28 };
+    Ok(serde_wasm_bindgen::to_value(&result)?)
+}
+
+
+/// Get all favorable transit signs (signs with >= 28 SAV bindus)
+#[wasm_bindgen]
+pub fn get_favorable_transit_signs(sav_bindus: &JsValue) -> Result<JsValue, JsValue> {
+    let bindus: Vec<i32> = serde_wasm_bindgen::from_value(sav_bindus.clone())?;
+    let mut favorable: Vec<usize> = Vec::new();
+    for (i, b) in bindus.iter().enumerate() {
+        if *b >= 28 {
+            favorable.push(i);
+        }
+    }
+    Ok(serde_wasm_bindgen::to_value(&favorable)?)
 }

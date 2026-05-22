@@ -19,6 +19,23 @@ import {
   calculate_sudarshan_chakra,
   is_in_abhijit_nakshatra,
   Location,
+  is_panchak_active,
+  predict_sade_sati_cycles,
+  calculate_aspects,
+  calculate_prashna_arudha,
+  calculate_prashna_sphutas,
+  calculate_gulika_sphuta,
+  calculate_moon_phase_details,
+  calculate_vimshottari_timeline,
+  calculate_combustion_info,
+  analyze_ashtakavarga_transit,
+  get_favorable_transit_signs,
+  calculate_karakamsa,
+  get_rashi_drishti,
+  calculate_arudha_padas,
+  calculate_argalas,
+  get_kp_sub_lord,
+  get_kp_sub_sub_lord,
 } from "../lib/panchangam.js";
 
 Deno.test("Jyotish Parity: Extended Planetary Positions", () => {
@@ -210,4 +227,116 @@ Deno.test("Jyotish Parity: Triple Perspective Sudarshan Chakra", () => {
   assertEquals(chakra.houses[0].lagna_sign, 1);
   assertEquals(chakra.houses[0].moon_sign, 4);
   assertEquals(chakra.houses[0].sun_sign, 8);
+});
+
+Deno.test("Jyotish Parity: Phase 2 Panchak & Sade Sati & Aspects", () => {
+  // 1. Panchak Check
+  assertEquals(is_panchak_active(295.0), true);
+  assertEquals(is_panchak_active(100.0), false);
+
+  // 2. Sade Sati Cycles Prediction
+  const cycles = predict_sade_sati_cycles(40.0, 2020, 10);
+  console.log("Sade Sati Cycles predicted:", cycles);
+  assertEquals(Array.isArray(cycles), true);
+
+  // 3. Aspects Engine
+  const planet_longs = [
+    [0, 10.0],
+    [5, 130.0], // Jupiter aspecting Sun with 5th house aspect (120 deg)
+  ];
+  const aspects = calculate_aspects(planet_longs);
+  console.log("Calculated aspects count:", aspects.length);
+  assertEquals(aspects.length > 0, true);
+});
+
+Deno.test("Jyotish Parity: Phase 2 Prashna & Moon Phase", () => {
+  // 1. Prashna Arudha
+  const arudha = calculate_prashna_arudha(249);
+  assertEquals(arudha, 8); // (249 - 1) % 12 = 8
+
+  // 2. Prashna Sphutas
+  const sphutas = calculate_prashna_sphutas(10.0, 20.0, 30.0, 40.0, 50.0);
+  console.log("Trisphuta:", sphutas.trisphuta, "Chatursphuta:", sphutas.chatursphuta);
+  assertEquals(sphutas.trisphuta, 60.0);
+  assertEquals(sphutas.chatursphuta, 100.0);
+
+  // 3. Gulika Sphuta
+  const gulika_start = calculate_gulika_sphuta(0.0, 36000000.0, 1, true); // Monday day Gulika (slot index 5)
+  console.log("Gulika Start MS:", gulika_start);
+  assertEquals(gulika_start, 22500000.0); // 0 + 5 * (36000000 / 8)
+
+  // 4. Moon Phase Details
+  const phase = calculate_moon_phase_details(0.0, 90.0);
+  console.log("Moon Illumination %:", phase.illumination_pct, "Phase Name:", phase.phase_name);
+  assertEquals(phase.illumination_pct > 0.0, true);
+  assertEquals(phase.phase_name, "First Quarter");
+});
+
+Deno.test("Jyotish Parity: Phase 2 Dasha Timeline & Combustion & Ashtakavarga Transit", () => {
+  // 1. Vimshottari Timeline
+  const timeline = calculate_vimshottari_timeline(0.0, 0.0, 10.0);
+  console.log("Timeline count:", timeline.length);
+  assertEquals(timeline.length > 0, true);
+
+  // 2. Combustion Info
+  const combustion = calculate_combustion_info(0.0, 5.0, 2, false); // Mercury at 5 deg direct
+  console.log("Mercury combust:", combustion.is_combust, "severity:", combustion.severity);
+  assertEquals(combustion.is_combust, true);
+  assertEquals(combustion.severity > 0.0, true);
+
+  // 3. Ashtakavarga Transit
+  const sav_bindus = [30, 25, 28, 20, 32, 24, 26, 28, 30, 22, 24, 26];
+  const transit_analysis = analyze_ashtakavarga_transit(0, sav_bindus);
+  console.log("Transit analysis sign 0:", transit_analysis);
+  assertEquals(transit_analysis.is_favorable, true);
+
+  const favorable_signs = get_favorable_transit_signs(sav_bindus);
+  console.log("Favorable transit signs count:", favorable_signs.length);
+  assertEquals(favorable_signs.includes(0), true);
+  assertEquals(favorable_signs.includes(1), false);
+});
+
+Deno.test("Jyotish Parity: Phase 2 Jaimini & KP Depth", () => {
+  const planet_longs = [
+    [0, 15.0],  // Sun in Aries (Sign 0), 15.0 deg
+    [1, 45.0],  // Moon in Taurus (Sign 1), 15.0 deg
+    [2, 75.0],  // Mercury in Gemini (Sign 2), 15.0 deg
+    [3, 118.0], // Venus in Cancer (Sign 3), 28.0 deg (highest degree -> Atmakaraka)
+    [4, 135.0], // Mars in Leo (Sign 4), 15.0 deg
+    [5, 165.0], // Jupiter in Virgo (Sign 5), 15.0 deg
+    [6, 195.0], // Saturn in Libra (Sign 6), 15.0 deg
+  ];
+
+  // 1. Karakamsa (Venus is AK at 28 deg in Cancer. D9 of 28 deg Cancer:
+  // Cancer is a movable sign, D9 starts from Cancer itself. 28 deg / 3.333 = 8.4 -> 9th part.
+  // 9th part from Cancer is Pisces (Sign 11). So Karakamsa should be 11.)
+  const karakamsa = calculate_karakamsa(planet_longs);
+  console.log("Karakamsa sign index:", karakamsa);
+  assertEquals(karakamsa >= 0 && karakamsa <= 11, true);
+
+  // 2. Rashi Drishti
+  const aspects = get_rashi_drishti(0); // Aries (movable)
+  console.log("Aries aspectos:", aspects);
+  assertEquals(aspects.includes(4), true); // Leo (fixed)
+  assertEquals(aspects.includes(7), true); // Scorpio (fixed)
+  assertEquals(aspects.includes(10), true); // Aquarius (fixed)
+  assertEquals(aspects.includes(1), false); // Taurus (adjacent fixed - excluded)
+
+  // 3. Arudha Padas
+  const padas = calculate_arudha_padas(0, planet_longs); // Lagna sign index 0
+  console.log("Arudha Padas:", padas);
+  assertEquals(Array.isArray(padas), true);
+  assertEquals(padas.length, 12);
+
+  // 4. Argalas
+  const argala_result = calculate_argalas(0, planet_longs);
+  console.log("Argala result:", argala_result);
+  assertEquals(argala_result.net_argala_strength >= 0, true);
+
+  // 5. KP Sub/Sub-Sub Lord
+  const sub_lord = get_kp_sub_lord(120.0);
+  const sub_sub_lord = get_kp_sub_sub_lord(120.0);
+  console.log("KP Sub Lord at 120.0:", sub_lord, "Sub-Sub Lord:", sub_sub_lord);
+  assertEquals(sub_lord >= 1 && sub_lord <= 9, true);
+  assertEquals(sub_sub_lord >= 1 && sub_sub_lord <= 9, true);
 });

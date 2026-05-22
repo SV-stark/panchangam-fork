@@ -237,3 +237,15 @@ pub fn calculate_kp_significators(planet_longs: &JsValue, cusps: Vec<f64>) -> KP
         house_significators: house_results,
     }
 }
+
+/// Get KP Sub Lord for a given longitude
+#[wasm_bindgen]
+pub fn get_sub_lord(longitude: f64) -> i32 {
+    calculate_kp_lords(longitude).sub_lord
+}
+
+/// Get KP Sub-Sub Lord for a given longitude
+#[wasm_bindgen]
+pub fn get_sub_sub_lord(longitude: f64) -> i32 {
+    calculate_kp_lords(longitude).sub_sub_lord
+}
